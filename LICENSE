@@ -19,10 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This repository contains only build scripts, documentation and screenshots.
-It does not redistribute any vendor software. The SCNet client binaries
-(SCNet-*.zip, 计算服务.app, app.asar) are the property of their respective
-owners and are downloaded from the vendor's own CDN at build time.
