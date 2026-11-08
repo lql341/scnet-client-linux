@@ -24,6 +24,10 @@
 
 ## 快速开始
 
+预构建的 `scnet-client_4.1.0_amd64.deb` 见 [Releases](https://github.com/lql341/scnet-client-linux/releases)
+（含厂商客户端本体、未签名，仅个人使用/评估；校验和也在 release 页）。
+从源码构建：
+
 依赖：`bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot`（Debian/Ubuntu 均可装齐）。
 
 ```bash

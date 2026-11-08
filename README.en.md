@@ -25,6 +25,13 @@ cross-platform code with Linux branches already present — it was never package
 
 ## Build
 
+A prebuilt `scnet-client_4.1.0_amd64.deb` is attached to
+[Releases](https://github.com/lql341/scnet-client-linux/releases) (it contains the
+vendor client itself, unsigned — personal use / evaluation only; checksums are
+on the release page).
+
+From source:
+
 Requirements: `bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot`.
 
 ```bash
