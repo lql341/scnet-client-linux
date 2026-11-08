@@ -186,9 +186,9 @@ try { binding = require('./crypto/build/Release/sshcrypto.node'); } catch {}
 
 本项目不编译 Linux addon，走纯 JS 路径：功能完整，仅在批量传输时较慢。
 
-### 4.7 窗口装饰
+### 4.7 窗口控件
 
-主窗口以 `titleBarStyle: "hidden"` 创建，标题栏由应用自绘，窗口按钮交由平台：
+厂商以 `titleBarStyle: "hidden"` 创建窗口，标题栏由应用自绘，窗口按钮交给平台：
 
 ```js
 { …, titleBarStyle: "hidden", trafficLightPosition: { x: 14, y: 16 }, titleBarOverlay: y(), … }
@@ -197,32 +197,38 @@ function w(e="light",t=36){return{color:"#00000000",height:t,symbolColor:"dark"=
 function y(e="light",t=36){return"darwin"===process.platform||("win32"===process.platform?w(e,t):void 0)}
 ```
 
-macOS 由系统绘制红绿灯，`y()` 返回 `undefined`；Windows 通过 `titleBarOverlay` 让 Chromium
-自绘按钮。Linux 上 `y()` 返回 `undefined`，于是完全没有窗口装饰：既没有最小化、最大化、
-关闭，也只能靠 `-webkit-app-region: drag` 拖动。
+macOS 由系统绘制红绿灯，Windows 通过 `titleBarOverlay` 让 Chromium 自绘按钮，Linux 两者都没有。
+应用为此内置了页面内的控件簇 `WindowTools`，渲染条件为 `darwin || (win32 && isMainWindow)`
+之外：
 
-两个渲染层另外按平台控制标题栏布局：
+```js
+let a="darwin"===s.H.context.platform, t="win32"===s.H.context.platform&&s.H.context.isMainWindow
+…
+return (s,b) => a||t ? null : h("div", {class:"window-tools …"}, [ … min / max / close … ])
+```
 
-- 当前 UI 仅在 `N || H`（`N = "win32" === platform`，`H = "darwin" === platform`）时渲染
-  `ClientWindowChrome`（36 px 拖拽条）；
-- 兼容 UI 按平台切换 `html.scnet-platform-windows`，该 class 通过
-  `env(titlebar-area-*)` 提供 `--scnet-window-titlebar-height` 与
-  `--scnet-window-controls-width`。
+因此在 Linux 上该控件簇会渲染，按钮本身可用——但只在应用外壳内。登录路由使用另一套布局，不包含
+`WindowTools`，所以登录窗口完全没有最小化与关闭控件。
 
-若只开启覆盖层而不改这两处，按钮会直接压在应用头部之上。因此
-[`scripts/patch-vendor.cjs`](../scripts/patch-vendor.cjs) 中的三个补丁必须一起应用：
+**尝试并否决的方案：Chromium 覆盖层。** 为 Linux 启用 `titleBarOverlay`（并在两个渲染层中预留
+36 px）后出现了两套重叠控件：Chromium 的圆形按钮压在厂商 `WindowTools` 字形之上。覆盖层背景色为
+全透明，没有任何绘制会清除该条带，于是厂商字形就与平台按钮并列显示。反过来隐藏厂商控件簇则会破坏
+主窗口——在 Linux 上 `WindowTools` 是厂商唯一的实现。
+
+**采用的方案：** 不触碰厂商路径（不启用覆盖层，`WindowTools` 保持可见，仍是主要控件面），只在缺少
+控件簇的页面补一个后备实现：
 
 | 补丁 | 目标 | 改动 |
 | --- | --- | --- |
-| `window-controls-overlay` | `dist-electron/main/index.js` | `y()` 在 Linux 上返回覆盖层配置 |
-| `window-chrome-modern` | `dist/static/js/async/*.js` | `N` 在 Linux 上为真，渲染 36 px 标题栏 |
-| `window-chrome-compat` | `dist/compat/static/js/async/*.js` | Linux 也设置 `scnet-platform-windows` |
+| `login-window-controls` | `dist/index.html`、`dist/compat/index.html` | 加载 `window-controls.js` |
 
-结果是 Windows 布局：最小化、最大化、关闭位于右上，顶部为拖拽条，左侧不预留红绿灯空间。
-按钮由 Chromium 绘制而非窗口管理器，因此在 GTK 与 Qt 桌面上外观一致。
+[`scripts/window-controls.js`](../scripts/window-controls.js) 观察文档变化，仅在**不存在
+`.window-tools` 元素时**通过既有 preload 桥（`host.invoke('window.minimize')`、
+`host.invoke('window.request-main-close')`）渲染最小化与关闭两个按钮，一旦外壳渲染出厂商控件簇
+即自行移除。它在其他平台不生效，也不会在已有控件的窗口上重复添加，因此任一时刻只有一套控件。
 
-`patch-vendor.cjs` 使用精确字符串替换：模式缺失或出现多次都会使构建失败，上游改动会以报错
-暴露，而不是静默产出一个没有窗口控件的包。`--check` 用于只读检查补丁状态。
+Linux 上的结果：登录窗口右上角为最小化与关闭（该窗口本身不允许最大化）；登录后应用头部内为厂商
+完整的最小化/最大化/关闭控件簇。
 
 ## 5. asar 重打包
 

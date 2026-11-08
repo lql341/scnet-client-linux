@@ -2,52 +2,43 @@
 /**
  * Apply the Linux-specific patches to an extracted app tree.
  *
- * Every patch is an exact-string replacement. A missing pattern is a hard error:
- * it means the upstream build changed and the behaviour must be re-derived
- * instead of silently producing a bundle without window controls.
+ * Patches are exact and idempotent: a replacement whose source pattern is gone
+ * but whose replacement is present counts as already applied, anything else is
+ * a hard error, so an upstream change surfaces as a failed build instead of a
+ * silently degraded bundle.
  *
  * usage: patch-vendor.cjs <extracted-app-dir> [--check]
- *        --check  report the state of every patch without writing
+ *        --check  report patch state without writing
  */
 'use strict';
 
 const fs = require('node:fs');
 const path = require('node:path');
 
+const HERE = __dirname;
+
+/**
+ * `append-script` patches inject a local script tag before </body> of every
+ * index.html under `root` and copy `script` next to it. Used for behaviours that
+ * are additive (the vendor code stays untouched).
+ */
 const PATCHES = [
   {
-    id: 'window-controls-overlay',
-    file: 'dist-electron/main/index.js',
+    id: 'login-window-controls',
+    kind: 'append-script',
+    target: 'dist/index.html',
+    additionalTargets: ['dist/compat/index.html'],
+    script: path.join(HERE, 'window-controls.js'),
+    tag: '<script src="./window-controls.js"></script>',
     summary:
-      'request the window controls overlay on Linux so the window manager draws ' +
-      'minimize/maximize/close at the top right',
-    from: 'function y(e="light",t=36){return"darwin"===process.platform||("win32"===process.platform?w(e,t):void 0)}',
-    to: 'function y(e="light",t=36){return"darwin"===process.platform?void 0:w(e,t)}',
-  },
-  {
-    id: 'window-chrome-modern',
-    root: 'dist',
-    summary:
-      'render the in-app window chrome on Linux like on Windows, which reserves the ' +
-      'drag region and the space taken by the overlay buttons',
-    from: 'H="darwin"===k.H.context.platform,N="win32"===k.H.context.platform,J=',
-    to: 'H="darwin"===k.H.context.platform,N=("win32"===k.H.context.platform||"linux"===k.H.context.platform),J=',
-  },
-  {
-    id: 'window-chrome-compat',
-    root: 'dist/compat',
-    summary:
-      'set the windows layout class on Linux as well, so the compat UI offsets dialogs ' +
-      'and overlays below the title bar area',
-    from: 'document.documentElement.classList.toggle("scnet-platform-windows","win32"===I.h.context.platform)',
-    to: 'document.documentElement.classList.toggle("scnet-platform-windows","win32"===I.h.context.platform||"linux"===I.h.context.platform)',
+      'load the Linux fallback window controls; the script removes itself once ' +
+      'the application shell renders its own control cluster',
   },
 ];
 
 const SCAN_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.css']);
 
-/** Resolve the single file under `dir` whose content contains `needle`. */
-function findFile(dir, needle) {
+function findFileByContent(dir, needle) {
   const matches = [];
   const walk = (current) => {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
@@ -63,6 +54,92 @@ function findFile(dir, needle) {
   return matches;
 }
 
+function applyAppendScript(appDir, patch, checkOnly) {
+  const targets = [patch.target, ...(patch.additionalTargets || [])]
+    .map((relative) => path.join(appDir, relative))
+    .filter((file) => fs.existsSync(file));
+
+  if (targets.length === 0) {
+    throw new Error(`no HTML entry points found for ${patch.target}`);
+  }
+
+  let changed = 0;
+  for (const file of targets) {
+    const html = fs.readFileSync(file, 'utf8');
+    const scriptName = path.basename(patch.script);
+    const scriptTarget = path.join(path.dirname(file), scriptName);
+
+    if (html.includes(patch.tag)) {
+      if (!fs.existsSync(scriptTarget) && !checkOnly) {
+        fs.copyFileSync(patch.script, scriptTarget);
+      }
+      continue;
+    }
+
+    const closing = html.lastIndexOf('</body>');
+    if (closing === -1) throw new Error(`no </body> in ${file}`);
+    if (checkOnly) {
+      changed += 1;
+      continue;
+    }
+
+    fs.writeFileSync(file, html.slice(0, closing) + '  ' + patch.tag + '\n' + html.slice(closing));
+    fs.copyFileSync(patch.script, scriptTarget);
+    changed += 1;
+  }
+
+  if (checkOnly && changed > 0) {
+    console.log(`todo ${patch.id}: ${changed} file(s) not patched`);
+    return 1;
+  }
+  console.log(`ok   ${patch.id}: ${patch.summary}`);
+  return 0;
+}
+
+function applyReplace(appDir, patch, checkOnly) {
+  let targets;
+  if (patch.file) {
+    targets = [path.join(appDir, patch.file)];
+  } else {
+    targets = findFileByContent(path.join(appDir, patch.root), patch.from);
+    if (targets.length === 0) {
+      const applied = findFileByContent(path.join(appDir, patch.root), patch.to);
+      if (applied.length === 1) {
+        console.log(`skip ${patch.id}: already applied`);
+        return 0;
+      }
+      console.error(`fail ${patch.id}: pattern not found under ${patch.root}`);
+      return 1;
+    }
+    if (targets.length !== 1) {
+      console.error(`fail ${patch.id}: pattern found in ${targets.length} files`);
+      return 1;
+    }
+  }
+
+  const target = targets[0];
+  const source = fs.readFileSync(target, 'utf8');
+  if (!source.includes(patch.from)) {
+    if (source.includes(patch.to)) {
+      console.log(`skip ${patch.id}: already applied`);
+      return 0;
+    }
+    console.error(`fail ${patch.id}: neither the original nor the patched form is present`);
+    return 1;
+  }
+  if (checkOnly) {
+    console.log(`todo ${patch.id}: not applied (${path.relative(appDir, target)})`);
+    return 1;
+  }
+  if (source.split(patch.from).length !== 2) {
+    console.error(`fail ${patch.id}: expected exactly one occurrence`);
+    return 1;
+  }
+  fs.writeFileSync(target, source.replace(patch.from, patch.to));
+  console.log(`ok   ${patch.id}: ${patch.summary}`);
+  return 0;
+}
+
 function main() {
   const args = process.argv.slice(2);
   const appDir = args.find((arg) => !arg.startsWith('--'));
@@ -74,52 +151,14 @@ function main() {
 
   let failures = 0;
   for (const patch of PATCHES) {
-    let targets;
-    if (patch.file) {
-      targets = [path.join(appDir, patch.file)];
-    } else {
-      targets = findFile(path.join(appDir, patch.root), patch.from);
-      if (targets.length === 0) {
-        // Already patched? Look for the replacement instead.
-        const applied = findFile(path.join(appDir, patch.root), patch.to);
-        if (applied.length === 1) {
-          console.log(`skip ${patch.id}: already applied`);
-          continue;
-        }
-        console.error(`fail ${patch.id}: pattern not found under ${patch.root}`);
-        failures += 1;
-        continue;
-      }
-      if (targets.length !== 1) {
-        console.error(`fail ${patch.id}: pattern found in ${targets.length} files`);
-        failures += 1;
-        continue;
-      }
-    }
-
-    const target = targets[0];
-    const source = fs.readFileSync(target, 'utf8');
-    if (!source.includes(patch.from)) {
-      if (source.includes(patch.to)) {
-        console.log(`skip ${patch.id}: already applied`);
-        continue;
-      }
-      console.error(`fail ${patch.id}: neither the original nor the patched form is present`);
+    try {
+      failures += patch.kind === 'append-script'
+        ? applyAppendScript(appDir, patch, checkOnly)
+        : applyReplace(appDir, patch, checkOnly);
+    } catch (error) {
+      console.error(`fail ${patch.id}: ${error.message}`);
       failures += 1;
-      continue;
     }
-    if (checkOnly) {
-      console.log(`todo ${patch.id}: not applied (${path.relative(appDir, target)})`);
-      failures += 1;
-      continue;
-    }
-    if (source.split(patch.from).length !== 2) {
-      console.error(`fail ${patch.id}: expected exactly one occurrence`);
-      failures += 1;
-      continue;
-    }
-    fs.writeFileSync(target, source.replace(patch.from, patch.to));
-    console.log(`ok   ${patch.id}: ${patch.summary}`);
   }
 
   if (checkOnly && failures === 0) console.log('all patches applied');

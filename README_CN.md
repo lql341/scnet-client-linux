@@ -116,24 +116,27 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 `ssh2` 的原生加速模块在上游即为可选（`try { require(...) } catch {}`），缺失只影响批量传输
 吞吐，不损失功能。
 
-## 对厂商代码的补丁
+## 窗口控件与厂商代码补丁
 
-除下列三处外，`app.asar` 逐字节沿用。这三个精确字符串补丁无法避免：厂商自绘标题栏，且只实现了
-macOS 与 Windows 两种形态。
+厂商在应用外壳内自绘最小化/最大化/关闭控件簇（`WindowTools`），只在 macOS（红绿灯）与
+Windows（`titleBarOverlay`）上向平台索取按钮。Linux 走页面内控件簇，但登录路由没有外壳，因此
+登录窗口完全没有控件。
 
-| 补丁 | 文件 | 原因 |
+为 Linux 启用 Chromium 覆盖层曾被尝试并否决：它会在厂商字形之上再画一套按钮，而覆盖层背景全透明，
+厂商字形会与平台按钮并列显示。
+
+最终方案不改动厂商路径，只在缺少控件簇的页面补一个后备实现：
+
+| 补丁 | 目标 | 改动 |
 | --- | --- | --- |
-| `window-controls-overlay` | `dist-electron/main/index.js` | 否则 Linux 窗口没有最小化、最大化与关闭 |
-| `window-chrome-modern` | `dist/static/js/async/*.js` | 渲染 36 px 拖拽条，为上述按钮预留空间 |
-| `window-chrome-compat` | `dist/compat/static/js/async/*.js` | 兼容 UI 同理，经 `scnet-platform-windows` 布局类 |
+| `login-window-controls` | `dist/index.html`、`dist/compat/index.html` | 加载 `window-controls.js` |
 
-三者必须一起应用：只开第一项会让按钮压在应用头部之上。
-[`scripts/patch-vendor.cjs`](scripts/patch-vendor.cjs) 在模式缺失或存在多个匹配时使构建失败，
-因此上游改动不会静默地让窗口控件消失。代码证据见
-[`docs/design_CN.md`](docs/design_CN.md#47-窗口装饰)。
+[`scripts/window-controls.js`](scripts/window-controls.js) 仅在**不存在 `.window-tools` 元素时**
+通过既有 preload 桥（`host.invoke('window.minimize')`、`host.invoke('window.request-main-close')`）
+渲染最小化与关闭，一旦外壳渲染出厂商控件簇即自行移除。它在其他平台不生效，因此任一时刻只有一套控件。
 
-窗口按钮由 Chromium 绘制（`titleBarOverlay` 机制），因此在 GTK 与 Qt 桌面上外观一致，位置也在
-Linux 期望的右上角。
+除此之外 `app.asar` 逐字节沿用：这是对厂商目录树的唯一改动，且为增量改动（一个 `index.html`
+标签加一个新文件）。
 
 ## 图标
 

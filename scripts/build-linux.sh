@@ -27,7 +27,7 @@ DIST="$BUILD/linux"
 
 # Versions. Everything except APP_VERSION can be overridden from the environment.
 APP_VERSION="${APP_VERSION:-$(cat "$ROOT/VERSION")}"
-DEB_REVISION="${DEB_REVISION:-2}"   # packaging revision, independent of the upstream version
+DEB_REVISION="${DEB_REVISION:-3}"   # packaging revision, independent of the upstream version
 ELECTRON_VERSION="${ELECTRON_VERSION:-44.7.0}"
 CANVAS_VERSION="${CANVAS_VERSION:-1.0.2}"
 CUA_DRIVER_VERSION="${CUA_DRIVER_VERSION:-0.34.1}"
@@ -281,8 +281,8 @@ Comment[en]=SCNet (National Supercomputing Internet) desktop client
 Exec=/opt/scnet-client/launcher.sh %U
 Icon=scnet-client
 Terminal=false
-Categories=Science;
-Keywords=scnet;hpc;supercomputing;compute;计算;
+Categories=Development;
+Keywords=scnet;hpc;supercomputing;science;compute;计算;
 StartupWMClass=scnet-client
 DESKTOP
   if command -v desktop-file-validate >/dev/null 2>&1; then
@@ -291,7 +291,7 @@ DESKTOP
   cat > "$PKG/DEBIAN/control" <<CONTROL
 Package: scnet-client
 Version: $APP_VERSION-$DEB_REVISION
-Section: science
+Section: devel
 Priority: optional
 Architecture: amd64
 Installed-Size: 490000

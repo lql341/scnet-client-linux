@@ -43,23 +43,25 @@ all checks passed
 
 ## 2. 窗口与布局
 
-方法：以空配置目录启动，轮询 `xwininfo -root -tree` 获取窗口，使用 `xwd` 抓取并解码为 PNG
-检查。
+方法：以空配置目录启动，轮询 `xwininfo -root -tree` 取得窗口，用 `xwd` 抓取并解码为 PNG 检查。
+若系统上装有旧版本，先终止旧实例，并按窗口 id 仅抓取被测实例的窗口。
 
 | 观察项 | 结果 |
 | --- | --- |
 | 窗口出现 | 标题「计算服务」，class `scnet-client`，1200×741 |
-| 首帧时间 | 首次启动 5–20 秒，之后更快 |
-| 渲染内容 | 登录页正常渲染；已有会话时仪表盘正常渲染 |
-| 窗口按钮 | 登录窗口右上为最小化与关闭；可缩放窗口另有最大化 |
-| 最小化生效 | 通过 XTEST 模拟点击后，map state 变为 `IsUnMapped` |
-| 恢复生效 | 发送 `_NET_ACTIVE_WINDOW` 后回到 `IsViewable` |
-| 拖拽区 | 除按钮外顶部 36 px 由 `-webkit-app-region: drag` 覆盖 |
+| 首帧时间 | 首次启动 5–20 秒 |
+| 渲染内容 | 登录页正常；存在会话时仪表盘正常 |
+| 登录窗口控件 | 右上角一组最小化与关闭，无重复 |
+| 最小化生效 | XTEST 模拟点击后 map state 变为 `IsUnMapped` |
+| 恢复生效 | `_NET_ACTIVE_WINDOW` 后回到 `IsViewable` |
+| 悬停状态 | 指针移到控件上会出现悬停底色，确认命中区域 |
+| 后备控件簇 | 存在 `.window-tools` 时 `window-controls.js` 报告 `hasRoot: false`，即自行退出 |
 
-证据：[`screenshot-linux.png`](screenshot-linux.png)（登录窗口，除不含任何用户数据外未做处理）。
+通过 DevTools 协议检查 DOM 确认：登录窗口渲染了厂商的 `.window-tools`（`.min item … size-30px`），
+且发布的包内 `function y()` 在 Linux 返回 `undefined`，即未启用 Chromium 覆盖层。
 
-未验证：平铺窗口管理器下的表现、分数缩放，以及登录后窗口的最大化状态（登录不在本次范围内；
-窗口以 `maximizable: true` 创建，而登录窗口本身不允许最大化，因此只显示两个按钮）。
+未验证：平铺窗口管理器下的表现、分数缩放，以及登录后窗口的最大化控件（登录不在本次范围内；登录
+窗口以 `maximizable: false` 创建，因此只显示两个控件）。
 
 ## 3. 图标集成
 

@@ -46,25 +46,28 @@ all checks passed
 ## 2. Window and layout
 
 Method: launch with an empty configuration directory, poll `xwininfo -root -tree` for the window,
-capture it with `xwd`, decode to PNG, and inspect.
+capture it with `xwd`, decode to PNG, and inspect. When an older build is installed system-wide,
+only the window of the instance under test is captured by window id, and the previous instance is
+terminated first.
 
 | Observation | Result |
 | --- | --- |
 | Window appears | title 「计算服务」, class `scnet-client`, 1200×741 |
-| Time to first window | 5–20 s on first launch, faster afterwards |
-| Renderer content | login form renders; after a session exists the dashboard renders |
-| Window buttons | minimize and close at top right on the login window, maximize additionally on resizable windows |
-| Minimize works | simulated click via XTEST changes the map state to `IsUnMapped` |
-| Restore works | `_NET_ACTIVE_WINDOW` request returns the window to `IsViewable` |
-| Drag strip | `-webkit-app-region: drag` covers the top 36 px outside the buttons |
+| Time to first window | 5–20 s on first launch |
+| Renderer content | sign-in form renders; with a session present the dashboard renders |
+| Sign-in window controls | one minimize and one close glyph at the top right, no duplicates |
+| Minimize works | simulated XTEST click changes map state to `IsUnMapped` |
+| Restore works | `_NET_ACTIVE_WINDOW` returns the window to `IsViewable` |
+| Hover state | pointer over a control paints its hover background, confirming hit targets |
+| Fallback cluster | `window-controls.js` reported `hasRoot: false` while `.window-tools` was present, i.e. it stands down |
 
-Evidence: [`screenshot-linux.png`](screenshot-linux.png) (login window, unmodified pixels except
-the absence of any user data).
+DOM inspection through the DevTools protocol confirmed that the sign-in window renders the vendor
+`.window-tools` element (`.min item … size-30px`) and that no Chromium overlay is active
+(`function y()` returns `undefined` on Linux in the shipped bundle).
 
-Not verified: appearance under a tiling window manager, fractional scaling, and the maximize state
-on the post-login window (logging in was out of scope; the window is created with
-`maximizable: true`, and the login window genuinely disallows maximize, which is why it shows two
-buttons instead of three).
+Not verified: appearance under a tiling window manager, fractional scaling, and the maximize
+control on the post-login window (sign-in was out of scope; the sign-in window is created with
+`maximizable: false`, which is why it shows two controls rather than three).
 
 ## 3. Icon integration
 

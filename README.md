@@ -122,24 +122,32 @@ Configuration is written to `~/.sclaw/`, the same location as the macOS and Wind
 The `ssh2` addon is optional in the upstream module (`try { require(...) } catch {}`), so no
 functionality is lost beyond throughput on bulk transfers.
 
-## Patches applied to vendor code
+## Window controls and vendor patches
 
-`app.asar` is otherwise reused byte for byte. Three exact-string patches are unavoidable, because
-the vendor draws its own title bar and only implements it for macOS and Windows:
+The vendor draws its own minimize/maximize/close cluster (`WindowTools`) inside the application
+shell, and only asks the platform for buttons on macOS (traffic lights) and Windows
+(`titleBarOverlay`). Linux gets the in-page cluster, but the sign-in route has no shell, so the
+sign-in window had no controls at all.
 
-| Patch | File | Reason |
+Enabling the Chromium overlay for Linux was tried and rejected: it draws a second set of buttons
+on top of the vendor glyphs, and because the overlay colour is fully transparent the vendor glyphs
+show through beside them.
+
+The shipped fix leaves the vendor path untouched and adds a fallback only where the cluster is
+missing:
+
+| Patch | Target | Change |
 | --- | --- | --- |
-| `window-controls-overlay` | `dist-electron/main/index.js` | without it a Linux window has no minimize, maximize or close control |
-| `window-chrome-modern` | `dist/static/js/async/*.js` | renders the 36 px drag strip that reserves space for those controls |
-| `window-chrome-compat` | `dist/compat/static/js/async/*.js` | same for the compat UI, via the `scnet-platform-windows` layout class |
+| `login-window-controls` | `dist/index.html`, `dist/compat/index.html` | loads `window-controls.js` |
 
-All three are required together; enabling only the first puts the buttons on top of the
-application header. [`scripts/patch-vendor.cjs`](scripts/patch-vendor.cjs) fails the build when a
-pattern is missing or ambiguous, so an upstream change cannot silently disable the window
-controls. See [`docs/design.md`](docs/design.md#47-window-chrome) for the code evidence.
+[`scripts/window-controls.js`](scripts/window-controls.js) renders a minimize/close pair through
+the existing preload bridge (`host.invoke('window.minimize')`,
+`host.invoke('window.request-main-close')`) **only while no `.window-tools` element exists**, and
+removes itself once the shell renders the vendor cluster. It is inert on other platforms, so there
+is exactly one set of controls at any time.
 
-Window buttons are drawn by Chromium (the `titleBarOverlay` mechanism), so they look identical on
-GTK and Qt desktops and sit at the top right as expected on Linux.
+`app.asar` is otherwise reused byte for byte: this is the only modification to the vendor tree,
+and it is additive (an `index.html` tag plus one new file).
 
 ## Icons
 

@@ -199,9 +199,9 @@ try { binding = require('./crypto/build/Release/sshcrypto.node'); } catch {}
 No Linux addon is built. The pure-JS path is used, which is functionally complete and only slower
 for bulk transfers.
 
-### 4.7 Window chrome
+### 4.7 Window controls
 
-The main window is created with `titleBarStyle: "hidden"`, so the application draws its own
+The vendor creates the window with `titleBarStyle: "hidden"`, so the application draws its own
 title bar and relies on the platform for the window buttons:
 
 ```js
@@ -211,36 +211,43 @@ function w(e="light",t=36){return{color:"#00000000",height:t,symbolColor:"dark"=
 function y(e="light",t=36){return"darwin"===process.platform||("win32"===process.platform?w(e,t):void 0)}
 ```
 
-On macOS the system draws traffic lights and `y()` returns `undefined`; on Windows the
-`titleBarOverlay` configuration asks Chromium to draw the buttons itself. On Linux `y()` returned
-`undefined` and no decoration existed at all: the window had no minimize, maximize or close
-control, and `-webkit-app-region: drag` was the only way to move it.
+macOS draws traffic lights, Windows uses the `titleBarOverlay` mechanism so Chromium draws the
+buttons, and Linux gets neither. The application compensates with an in-page control cluster,
+`WindowTools`, which renders unless `darwin || (win32 && isMainWindow)`:
 
-Two renderers additionally gate their title bar layout on the platform:
+```js
+let a="darwin"===s.H.context.platform, t="win32"===s.H.context.platform&&s.H.context.isMainWindow
+…
+return (s,b) => a||t ? null : h("div", {class:"window-tools …"}, [ … min / max / close … ])
+```
 
-- the current UI renders `ClientWindowChrome` (a 36 px drag strip) only when
-  `N || H`, where `N = "win32" === platform` and `H = "darwin" === platform`;
-- the compat UI toggles `html.scnet-platform-windows`, which feeds
-  `--scnet-window-titlebar-height` and `--scnet-window-controls-width` from
-  `env(titlebar-area-*)`.
+On Linux that cluster is therefore rendered, and it does provide working buttons — but only in the
+application shell. The sign-in route uses a different layout that does not include `WindowTools`,
+so the sign-in window had no minimize or close control at all.
 
-Enabling the overlay without these two changes would have produced buttons drawn *over* the
-application header. The three patches in [`scripts/patch-vendor.cjs`](../scripts/patch-vendor.cjs)
-are therefore applied together:
+**Attempted and rejected: the Chromium overlay.** Enabling `titleBarOverlay` for Linux (and the
+in-app chrome that reserves 36 px for it in both renderers) produced two overlapping sets of
+controls: Chromium's own circular buttons on top of the vendor's `WindowTools` glyphs. The
+transparent overlay colour means nothing clears the strip, so the vendor glyphs showed through
+beside the platform buttons. Removing the vendor cluster instead breaks the main window, where
+`WindowTools` is the only implementation the vendor has for Linux.
+
+**Implemented:** leave the vendor path untouched — no overlay, `WindowTools` stays visible and
+remains the primary control surface — and add a fallback only where the cluster is absent:
 
 | Patch | Target | Change |
 | --- | --- | --- |
-| `window-controls-overlay` | `dist-electron/main/index.js` | `y()` returns the overlay configuration on Linux |
-| `window-chrome-modern` | `dist/static/js/async/*.js` | `N` is true on Linux, so the 36 px chrome renders |
-| `window-chrome-compat` | `dist/compat/static/js/async/*.js` | `scnet-platform-windows` is set on Linux |
+| `login-window-controls` | `dist/index.html`, `dist/compat/index.html` | loads `window-controls.js` |
 
-The result is the Windows arrangement: minimize, maximize and close at the top right, a drag strip
-across the top, and no traffic-light space reserved on the left. Buttons come from Chromium rather
-than the window manager, so they look identical across GTK and Qt desktops.
+[`scripts/window-controls.js`](../scripts/window-controls.js) watches the document and renders a
+minimize/close pair through the existing preload bridge (`host.invoke('window.minimize')`,
+`host.invoke('window.request-main-close')`) **only while no `.window-tools` element exists**, and
+removes itself as soon as the shell renders the vendor cluster. It is inert on other platforms and
+adds no controls to windows that already have them, so there is exactly one cluster at any time.
 
-`patch-vendor.cjs` performs exact-string replacements and fails the build if a pattern is missing
-or appears more than once, so an upstream change surfaces as an error instead of a silent
-regression. `--check` reports patch state without writing.
+The result on Linux: minimize and close at the top right on the sign-in window (the window is not
+maximizable there), and the vendor's full minimize/maximize/close cluster inside the application
+header after sign-in.
 
 ## 5. asar repacking
 
