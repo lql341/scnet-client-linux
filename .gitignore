@@ -1,4 +1,4 @@
-# 厂商二进制与构建产物（不入库）
+# Vendor archives and build outputs (never committed)
 mac-x64.zip
 *.zip
 *.dmg
@@ -13,3 +13,4 @@ build/
 *.tgz
 node_modules/
 .DS_Store
+__pycache__/

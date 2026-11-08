@@ -1,0 +1,128 @@
+# Verification
+
+What was executed, on which system, and what the result was. Anything not listed here was not
+verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session, a single
+1200×741-capable display, and no root access during testing (the `.deb` was unpacked with
+`dpkg-deb -x` rather than installed with `apt`).
+
+## 1. Automated checks in the build
+
+`scripts/build-linux.sh` fails the build rather than producing a partial bundle:
+
+| Check | Stage | Behaviour on failure |
+| --- | --- | --- |
+| Vendor archive SHA-512 | 0 | Aborts; a resumed download is retried once from scratch |
+| Patch patterns present exactly once | 2 | Aborts with the patch id |
+| Native artifacts present | 6b | Aborts listing the missing artifact |
+| `desktop-file-validate` | 8 | Aborts on an invalid desktop entry |
+| Native smoke test | 6b | Aborts on the first failing module |
+
+`scripts/smoke-native.cjs` runs inside the Electron runtime with `ELECTRON_RUN_AS_NODE=1` and
+checks:
+
+| Item | Assertion |
+| --- | --- |
+| `node-pty` | spawns `/bin/sh -c "printf pty-ok"`, reads the output, exits 0 |
+| `@napi-rs/canvas` | creates a 16×16 canvas, fills it, encodes a PNG |
+| `ssh2` | `Client` export is a function |
+| `@ubjs/node` | native runtime module loads, `resolveLibPath` exported |
+| `@trycua/cua-driver` | Rust SDK loads through `dlopen` from `app.asar.unpacked` |
+| `resources/bin/uv` | executes, prints a version |
+| `resources/agent-browser/agent-browser` | executes, prints a version |
+
+Observed output on the reference system:
+
+```text
+ok   node-pty (spawn/read/exit)
+ok   @napi-rs/canvas (16x16, 115 B PNG)
+ok   ssh2 (Client export)
+ok   @ubjs/node (native runtime loaded)
+ok   @trycua/cua-driver (174 exports)
+ok   resources/bin/uv (uv 0.9.9)
+ok   resources/agent-browser/agent-browser (agent-browser 0.39.0)
+all checks passed
+```
+
+## 2. Window and layout
+
+Method: launch with an empty configuration directory, poll `xwininfo -root -tree` for the window,
+capture it with `xwd`, decode to PNG, and inspect.
+
+| Observation | Result |
+| --- | --- |
+| Window appears | title 「计算服务」, class `scnet-client`, 1200×741 |
+| Time to first window | 5–20 s on first launch, faster afterwards |
+| Renderer content | login form renders; after a session exists the dashboard renders |
+| Window buttons | minimize and close at top right on the login window, maximize additionally on resizable windows |
+| Minimize works | simulated click via XTEST changes the map state to `IsUnMapped` |
+| Restore works | `_NET_ACTIVE_WINDOW` request returns the window to `IsViewable` |
+| Drag strip | `-webkit-app-region: drag` covers the top 36 px outside the buttons |
+
+Evidence: [`screenshot-linux.png`](screenshot-linux.png) (login window, unmodified pixels except
+the absence of any user data).
+
+Not verified: appearance under a tiling window manager, fractional scaling, and the maximize state
+on the post-login window (logging in was out of scope; the window is created with
+`maximizable: true`, and the login window genuinely disallows maximize, which is why it shows two
+buttons instead of three).
+
+## 3. Icon integration
+
+Method: extract the package into a temporary root with `dpkg-deb -x`, add the standard
+`index.theme`, regenerate the cache with `gtk-update-icon-cache`, then resolve `scnet-client`
+through `Gtk.IconTheme` at several sizes.
+
+| Size requested | Resolved file |
+| --- | --- |
+| 16 | `16x16/apps/scnet-client.png` |
+| 24 | `24x24/apps/scnet-client.png` |
+| 32 | `32x32/apps/scnet-client.png` |
+| 48 | `48x48/apps/scnet-client.png` |
+| 64 | `64x64/apps/scnet-client.png` |
+| 128 | `128x128/apps/scnet-client.png` |
+| 256 | `256x256/apps/scnet-client.png` |
+
+`desktop-file-validate` exits 0 for the installed entry. Installation through `apt` itself was not
+exercised on the reference system because root access was unavailable; `postinst`/`postrm` are
+plain `chown`/`chmod`/cache-refresh actions that were reviewed but not executed by `dpkg`.
+
+## 4. Sandbox
+
+Method: run the launcher with a clean configuration directory and inspect the main process argv,
+then force the fallback with `SCNET_NO_SANDBOX=1`.
+
+| Case | argv | Result |
+| --- | --- | --- |
+| Default on the reference system | no `--no-sandbox` | window appears; unprivileged user namespaces are enabled here |
+| `SCNET_NO_SANDBOX=1` | `--no-sandbox` | window appears |
+| Installed package | setuid `chrome-sandbox` after `postinst` | not executed (no root); the launcher's setuid branch was reviewed only |
+
+## 5. Packaging
+
+| Check | Result |
+| --- | --- |
+| `dpkg-deb -c` layout | `/opt/scnet-client`, `/usr/bin/scnet-client` symlink, desktop entry, 13 icon sizes |
+| Unpack and launch | window appears from the unpacked tree |
+| Version | `4.1.0-2` |
+| Dependencies | both `t64` and pre-`t64` names, so Debian 12/13 and Ubuntu 22.04/24.04 resolve |
+
+## 6. Reproducibility
+
+The pipeline was executed repeatedly during development. Cached stages are reused; a cold run
+downloads ~390 MB (vendor archive, Electron runtime, three npm packages, two binaries) and takes
+about five minutes on the reference system.
+
+## 7. Not verified
+
+- Sign-in, HPC job submission, SSH sessions, file transfer, notebook lifecycle;
+- computer use (CUA): the library loads, but pointer and screenshot actions were not exercised,
+  and the driver needs X11/Wayland access plus `libXtst`;
+- auto-update: the feed carries no Linux artifacts and `electron-updater` cannot replace this
+  layout, so the feature is inert;
+- tray icon: needs `libayatana-appindicator3`/`libappindicator3`, not installed here;
+- multiple instances sharing one configuration directory: a windowless start was observed
+  occasionally during testing, caused by the single-instance lock combined with session restore.
+  Terminating remaining instances and relaunching restores normal behaviour; this was not
+  investigated further;
+- ARM64: the pipeline is x86-64 only, although upstream ships an arm64 macOS build and all four
+  native packages exist for `linux-arm64-gnu`.

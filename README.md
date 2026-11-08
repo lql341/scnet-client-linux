@@ -1,110 +1,240 @@
 # scnet-client-linux
 
-非官方的 **SCNet 客户端（应用名「计算服务」）Linux x64 移植构建脚本**。
-从官方 macOS Electron 包出发，替换掉平台相关的二进制与原生模块，产出可运行的
-便携目录和 Debian/Ubuntu 安装包。
+[中文](README_CN.md) | English
 
-[English](README.en.md)
+Build pipeline that produces a Linux x64 variant of the official SCNet desktop client
+(application name 计算服务, bundle identifier `com.sugon.sacp`) from the vendor's macOS
+Electron distribution.
 
-> 仓库**不包含**任何厂商二进制或构建产物，只包含脚本、文档和截图。
-> 构建时由脚本从官方 CDN 下载 `SCNet-<version>-x64.zip`，请自行确认这样做
-> 符合你所在地区/场景对官方客户端的使用约定。
-
-![Linux 上的 SCNet 客户端](docs/screenshot-linux.png)
-
-## 结论
-
-可行，且已实际跑通（Debian 13 x64 + X11）：主进程 / 渲染进程 / 原生模块全部正常，
-界面功能完整。官方只发布 Windows、macOS、Android，没有 Linux 包；但客户端本身是
-跨平台代码，Linux 分支是现成的，只是从未打包。
-
-- 上游版本：SCNet Client **4.1.0**（`com.sugon.sacp`），Electron **44.7.0**
-- 构建产物：`build/linux/`（便携目录）+ `scnet-client_4.1.0_amd64.deb`
-- 配置落点与 macOS/Windows 一致：`~/.sclaw/`
-
-## 快速开始
-
-预构建的 `scnet-client_4.1.0_amd64.deb` 见 [Releases](https://github.com/lql341/scnet-client-linux/releases)
-（含厂商客户端本体、未签名，仅个人使用/评估；校验和也在 release 页）。
-从源码构建：
-
-依赖：`bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot`（Debian/Ubuntu 均可装齐）。
+Current target: **4.1.0** (Electron **44.7.0**), see [`VERSION`](VERSION).
 
 ```bash
-./build-linux.sh                     # 全流程：下载官方包 → 替换 → 打包
-./build/linux/launcher.sh            # 直接运行便携版
-sudo apt install ./scnet-client_4.1.0_amd64.deb   # 或安装 deb 后从菜单启动
+scripts/check-upstream.sh   # compare this repository's target with the live vendor feed
 ```
 
-脚本是幂等的：中间产物缓存在 `build/cache/`、`build/work/`，重复执行只重建变化的部分；
-下载会用 `latest-mac.yml` 里的 SHA-512 校验，打包前还会自检 6 个必需的 Linux 原生产物。
+The vendor publishes Windows, macOS and Android builds only. The application itself is
+platform-neutral Electron code — its main process already carries Linux code paths for the
+runtime provisioner, clipboard, tray, storage and terminal — so the platform-specific parts can
+be replaced rather than reimplemented. This repository contains that replacement procedure, the
+resulting Debian package definition, and the evidence used to justify it.
 
-启动器会尽量保留 Chromium 沙箱（setuid `chrome-sandbox` 或非特权 user namespace，
-包括 Ubuntu 23.10+ 的 AppArmor 限制），只有两者都不可用时才退化为 `--no-sandbox`；
-`SCNET_NO_SANDBOX=1` 可强制退化。
+## Scope
 
-产物布局：
+In scope:
 
+- replacing the Electron runtime, native node modules and standalone binaries with Linux builds;
+- repacking `app.asar` so the Linux native artifacts resolve correctly;
+- packaging: portable bundle, `.deb`, desktop entry, unprivileged launcher;
+- documenting what was verified, how, and what remains unknown.
+
+Out of scope:
+
+- any modification of the vendor's JavaScript: `app.asar` contents are used byte-for-byte;
+- reimplementation of application features;
+- support commitments. This is not an official distribution.
+
+The repository tree contains no vendor binaries and no build outputs. The vendor archive is
+fetched from the vendor CDN at build time and verified against the SHA-512 published in
+`latest-mac.yml`. A prebuilt package is attached to
+[Releases](https://github.com/lql341/scnet-client-linux/releases) for evaluation; it contains the
+vendor client and is unsigned.
+
+## Requirements
+
+| Component | Version / notes |
+| --- | --- |
+| Host | Debian 12/13 or Ubuntu 22.04/24.04, x86-64 |
+| Build tools | `bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot` |
+| Disk | ~3 GB for `build/work` and `build/cache`, ~750 MB for the bundle |
+| Network | vendor CDN (`dlcdn.scnet.cn`), npm registry, PyPI mirror, Electron mirror |
+
+Windows and macOS hosts are not supported as build hosts.
+
+## Build
+
+```bash
+git clone https://github.com/lql341/scnet-client-linux.git
+cd scnet-client-linux
+scripts/build-linux.sh                 # full pipeline, ~5 min with warm caches
+scripts/build-linux.sh --portable-only # skip the .deb
+scripts/build-linux.sh --clean         # discard build/ first
 ```
-build/linux/
-├── scnet-client                  Electron 44.7.0 Linux 运行时
-├── launcher.sh                   启动器（无 setuid sandbox 时自动 --no-sandbox）
+
+The pipeline is idempotent: downloads are cached in `build/cache/`, intermediate trees in
+`build/work/`, and each stage is skipped when its output already exists.
+
+| Stage | Action |
+| --- | --- |
+| 0 | fetch `SCNet-<version>-x64.zip`, verify SHA-512, extract |
+| 1 | fetch `electron-v44.7.0-linux-x64.zip` |
+| 2 | extract `app.asar`, apply the window-decoration patches |
+| 3 | install `@napi-rs/canvas`, `@trycua/cua-driver`, `@ubjs/node` Linux builds |
+| 4 | compile `node-pty` against the Electron ABI |
+| 5 | fetch the `uv` and `agent-browser` Linux binaries |
+| 6 | repack `app.asar` (`--unpack-dir node_modules`), copy resources, self-check |
+| 7 | extract the icon set (16–1024 px), write `launcher.sh` |
+| 8 | build the Debian package |
+
+Outputs:
+
+```text
+build/linux/                                portable bundle
+├── scnet-client                            Electron 44.7.0 runtime
+├── launcher.sh                             sandbox-aware launcher
 └── resources/
-    ├── app.asar                  重新打包的上游 asar（JS 未改动）
-    ├── app.asar.unpacked/        全部 node_modules（含 Linux 原生模块）
-    ├── bin/uv                    uv 0.9.9 Linux 静态二进制
-    ├── agent-browser/             agent-browser 0.39.0 Linux 二进制
+    ├── app.asar                            repacked, JavaScript unmodified
+    ├── app.asar.unpacked/                  node_modules with Linux native modules
+    ├── bin/uv                              uv 0.9.9 (static)
+    ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ connectors/ home-scenarios/ cli/ cua/
+scnet-client_4.1.0_amd64.deb
 ```
 
-## 换了哪些东西
+### Run
 
-| 部件 | macOS 包内 | Linux 版替换 |
+```bash
+build/linux/launcher.sh                          # portable
+sudo apt install ./scnet-client_4.1.0_amd64.deb  # then start "SCNet 计算服务" from the menu
+```
+
+The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
+`chrome-sandbox`, or unprivileged user namespaces including the Ubuntu 23.10+
+`apparmor_restrict_unprivileged_userns` restriction — and falls back to `--no-sandbox` only when
+neither is available. `SCNET_NO_SANDBOX=1` forces the fallback.
+
+Configuration is written to `~/.sclaw/`, the same location as the macOS and Windows builds.
+
+## Replaced components
+
+| Component | Vendor macOS artifact | Linux replacement | Source |
+| --- | --- | --- | --- |
+| Electron runtime | 44.7.0 darwin | `electron-v44.7.0-linux-x64` | Electron mirror |
+| `node-pty` 1.1.0 | `prebuilds/darwin-*` | compiled addon in `prebuilds/linux-x64/` | Electron headers |
+| `@napi-rs/canvas` 1.0.2 | `canvas-darwin-*` | `@napi-rs/canvas-linux-x64-gnu` | npm |
+| `@trycua/cua-driver` 0.34.1 | `cua-driver-darwin-*` | `@trycua/cua-driver-linux-x64-gnu` | npm |
+| `@ubjs/node` 0.31.0-3 | `node-darwin-*` | `@ubjs/node-linux-x64-gnu` | npm |
+| `agent-browser` 0.39.0 | Mach-O executable | `bin/agent-browser-linux-x64` | npm, same version |
+| `uv` | Mach-O executable | `uv` 0.9.9 static binary | PyPI wheel |
+| `ssh2` native acceleration | `sshcrypto.node` (darwin) | omitted; pure-JS fallback | — |
+| `app.asar` | partial unpack list | repacked with `--unpack-dir node_modules` | `@electron/asar` |
+| Icon and entry point | `icon.icns`, `Info.plist` | extracted PNG, `.desktop`, launcher | — |
+
+The `ssh2` addon is optional in the upstream module (`try { require(...) } catch {}`), so no
+functionality is lost beyond throughput on bulk transfers.
+
+## Patches applied to vendor code
+
+`app.asar` is otherwise reused byte for byte. Three exact-string patches are unavoidable, because
+the vendor draws its own title bar and only implements it for macOS and Windows:
+
+| Patch | File | Reason |
 | --- | --- | --- |
-| Electron 运行时 | 44.7.0 darwin | `electron-v44.7.0-linux-x64.zip` |
-| `node-pty` | `prebuilds/darwin-*` | 按 Electron 44.7.0 头文件源码编译 `prebuilds/linux-x64/pty.node` |
-| `@napi-rs/canvas` | `canvas-darwin-*` | `@napi-rs/canvas-linux-x64-gnu@1.0.2` |
-| `@trycua/cua-driver` | `cua-driver-darwin-*` | `@trycua/cua-driver-linux-x64-gnu@0.34.1` |
-| `@ubjs/node` | `node-darwin-*` | `@ubjs/node-linux-x64-gnu@0.31.0-3` |
-| `agent-browser` | Mach-O 0.39.0 | npm 包内 `bin/agent-browser-linux-x64` |
-| `resources/bin/uv` | Mach-O | uv 0.9.9 Linux 静态二进制（PyPI wheel） |
-| `ssh2` 原生加速 | `sshcrypto.node` (darwin) | 不提供；ssh2 自动回退纯 JS 实现 |
-| `app.asar` | 部分 node_modules unpacked | 重打包 + `--unpack-dir node_modules` |
-| 图标 / 入口 | `icon.icns` | 从 icns 提取 1024px PNG + `.desktop` + launcher |
+| `window-controls-overlay` | `dist-electron/main/index.js` | without it a Linux window has no minimize, maximize or close control |
+| `window-chrome-modern` | `dist/static/js/async/*.js` | renders the 36 px drag strip that reserves space for those controls |
+| `window-chrome-compat` | `dist/compat/static/js/async/*.js` | same for the compat UI, via the `scnet-platform-windows` layout class |
 
-`app.asar` 内的 JavaScript 一行未改。
+All three are required together; enabling only the first puts the buttons on top of the
+application header. [`scripts/patch-vendor.cjs`](scripts/patch-vendor.cjs) fails the build when a
+pattern is missing or ambiguous, so an upstream change cannot silently disable the window
+controls. See [`docs/design.md`](docs/design.md#47-window-chrome) for the code evidence.
 
-## 已验证 / 未验证
+Window buttons are drawn by Chromium (the `titleBarOverlay` mechanism), so they look identical on
+GTK and Qt desktops and sit at the top right as expected on Linux.
 
-已验证：
+## Icons
 
-- 主进程、preload、渲染进程正常启动，窗口标题「计算服务」，1200×741，界面完整；
-- 会话、skills、`home-scenarios`、`~/.sclaw` 读写正常；
-- 原生模块冒烟测试全部通过：`node-pty`（spawn `/bin/echo`）、`@napi-rs/canvas`、
-  `ssh2`、`@ubjs/node`、`@trycua/cua-driver`（Rust `.so` 从 `app.asar.unpacked` 加载成功）；
-- `resources/bin/uv`、`resources/agent-browser/agent-browser` 可执行且版本正确；
-- deb 解包后同样能启动。
+`icon.icns` provides PNG representations at 32/64/128/256/512/1024 px. The build extracts them and
+resamples the missing sizes, installing 13 sizes (16–1024) into
+`/usr/share/icons/hicolor/<size>x<size>/apps/`, and refreshes the icon cache in `postinst`/`postrm`.
 
-未验证 / 已知限制：
+A single 1024 px image is not enough: menu and panel implementations resolve `Icon=` through the
+theme index, and a theme that cannot satisfy the requested size — or a stale `icon-theme.cache` —
+renders nothing. That is why the earlier package had no menu icon.
 
-- 未做联网登录、HPC 作业提交、SSH 会话、文件传输的完整回归；
-- 电脑操作（CUA）：库可加载，但未实测点击/截图，且依赖 X11/Wayland 权限与 `libXtst` 等运行时；
-- 自动更新不可用：`app-update.yml` 指向 macOS feed，electron-updater 也无法在 Linux 上
-  替换包体；升级只能重跑本脚本（见 `check-upstream.sh`）；
-- 没有代码签名/公证；
-- 非官方构建，SCNet 不提供支持；若官方发布 Linux 版，请改用官方包。
+See [`docs/design.md`](docs/design.md) for the reasoning behind each substitution.
 
-## 文档
+## Repository structure
 
-- [docs/analysis.md](docs/analysis.md) — 客户端内部结构、分发源、为什么 Linux 可行（含代码证据）
-- [docs/packaging.md](docs/packaging.md) — asar 重打包、原生模块 ABI、deb 布局、升级流程
+```text
+scnet-client-linux/
+├── VERSION                        Target upstream version
+├── README.md / README_CN.md       Overview, English / Chinese
+├── scripts/
+│   ├── build-linux.sh             Build pipeline (8 stages, idempotent)
+│   ├── check-upstream.sh          Compare target with the live vendor feed
+│   ├── patch-vendor.cjs           Window-decoration patches (exact match, fails on drift)
+│   ├── smoke-native.cjs           Native artifact smoke test (runs inside the build)
+│   └── extract-icons.py           Icon set extraction and resampling from .icns
+├── docs/
+│   ├── design.md / design_CN.md         Package analysis, substitutions, packaging decisions
+│   ├── verification.md / verification_CN.md   Procedure, observed results, unknowns
+│   └── screenshot-linux.png             Linux window with native window controls
+└── .github/workflows/check.yml    Lint and policy checks (no vendor binaries in tree)
+```
 
-## 免责声明
+`build/`, `app/`, the vendor archive and the `.deb` are ignored by Git; nothing in the tree is
+derived from the vendor package.
 
-本项目与 曙光智算 / 国家超算互联网（SCNet）无关，未获其授权或认可。
-仓库中不含厂商代码或二进制，构建产物由你在本地从官方分发包生成，请自行承担合规责任。
+## Verification
+
+The build fails if any of the four native artifacts is missing, and then runs
+[`scripts/smoke-native.cjs`](scripts/smoke-native.cjs), which loads every platform-specific
+artifact and exercises the ones testable without a display (`node-pty` spawn/read/exit,
+`@napi-rs/canvas` PNG encode, `ssh2`, `@ubjs/node`, `@trycua/cua-driver` Rust `dlopen`, plus the
+`uv` and `agent-browser` executables).
+
+Interactive verification was performed on Debian 13 x64/X11: window titled 计算服务 at 1200×741
+with minimize/close at the top right (maximize additionally on resizable windows), minimize
+verified by simulated click, icon resolution verified through `Gtk.IconTheme` at seven sizes, and
+the same behaviour after unpacking the `.deb`. Procedure, commands and results:
+[`docs/verification.md`](docs/verification.md).
+
+## Known limitations
+
+| Area | Status |
+| --- | --- |
+| Login, HPC job submission, SSH sessions, file transfer | Not exercised end to end |
+| Computer use (CUA) | Library loads; pointer/screenshot actions untested; requires X11/Wayland access and `libXtst` |
+| Auto-update | Not functional: the update feed serves macOS/Windows artifacts, and `electron-updater` cannot replace a Linux bundle. Upgrade by rebuilding |
+| Code signing | None |
+| Tray icon | Requires `libayatana-appindicator3` or `libappindicator3` |
+| Maximize button after sign-in | Not observed directly; the window is created with `maximizable: true` and the login window legitimately disallows maximize |
+| Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
+| Vendor support | None; not an official distribution |
+
+## Updating to a new upstream release
+
+1. `scripts/check-upstream.sh` reports the new version and file list.
+2. Update `VERSION` and `MAC_ZIP_SHA512` (SHA-512 of the x64 zip, base64-decoded from
+   `latest-mac.yml`).
+3. If the bundled Electron version changed (`Frameworks/Electron Framework.framework/Versions/A/
+   Resources/Info.plist`), update `ELECTRON_VERSION`; `node-pty` is recompiled automatically.
+   Re-check that the three patterns in `scripts/patch-vendor.cjs` still exist — the build fails if
+   they do not, and the new window code has to be re-derived rather than ignored.
+4. Reconcile the native module versions with the new `app.asar/package.json`
+   (`CANVAS_VERSION`, `CUA_DRIVER_VERSION`, `UBJS_VERSION`, `NODE_PTY_VERSION`,
+   `AGENT_BROWSER_VERSION`, `UV_VERSION`).
+5. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
+   [`docs/verification.md`](docs/verification.md).
+
+New native dependencies (`.node`, `.so`) must be matched with an official `linux-x64-gnu`
+variant, otherwise the dependent feature fails at runtime.
+
+## Documentation
+
+- [`docs/design.md`](docs/design.md) — upstream package analysis, substitution rationale, asar
+  and ABI decisions, packaging layout
+- [`docs/verification.md`](docs/verification.md) — verification procedure, observed results,
+  remaining unknowns
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or supported by 曙光智算 or the National
+Supercomputing Internet (SCNet). No vendor code or binaries are redistributed in the repository;
+build outputs are generated locally from the vendor's own distribution. Compliance with the
+vendor's terms is the responsibility of whoever builds or installs the result.
 
 ## License
 
-仓库内脚本与文档：MIT（见 [LICENSE](LICENSE)）。
-上游客户端软件版权归其权利人所有，不受本仓库许可影响。
+Scripts and documentation in this repository are MIT-licensed — see [LICENSE](LICENSE). The
+upstream client remains the property of its owners and is not covered by that license.

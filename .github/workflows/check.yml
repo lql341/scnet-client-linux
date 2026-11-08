@@ -10,17 +10,55 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Bash syntax
+
+      - name: Shell syntax
         run: |
-          bash -n build-linux.sh
-          bash -n check-upstream.sh
+          bash -n scripts/build-linux.sh
+          bash -n scripts/check-upstream.sh
+
+      - name: Node syntax
+        run: |
+          node --check scripts/patch-vendor.cjs
+          node --check scripts/smoke-native.cjs
+
+      - name: Python syntax
+        run: python3 -m py_compile scripts/extract-icons.py
+
       - name: shellcheck
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning build-linux.sh check-upstream.sh || true
-      - name: Ensure no vendor binaries are tracked
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning scripts/build-linux.sh scripts/check-upstream.sh
+
+      - name: Icon extraction works
         run: |
-          if git ls-files | grep -Ei '\.(zip|dmg|exe|deb|appimage|whl|tgz)$|^app/|^build/'; then
-            echo "vendor binary or build output tracked"; exit 1
+          # The screenshot doubles as a decodable PNG fixture for the resampler path.
+          python3 - <<'PY'
+          import struct, sys
+          data = open('docs/screenshot-linux.png', 'rb').read()
+          assert data[:8] == b'\x89PNG\r\n\x1a\n', 'screenshot is not a PNG'
+          width, height = struct.unpack('>II', data[16:24])
+          assert (width, height) == (1200, 741), (width, height)
+          print('screenshot ok', width, height)
+          PY
+
+      - name: Policy - no vendor binaries or build outputs
+        run: |
+          if git ls-files | grep -Ei '\.(zip|dmg|exe|deb|appimage|whl|tgz|tar\.gz)$|^app/|^build/|node_modules/'; then
+            echo "::error::vendor binary or build output is tracked"
+            exit 1
           fi
-          echo "ok"
+          echo ok
+
+      - name: Policy - documented files exist
+        run: |
+          for f in VERSION README.md README_CN.md LICENSE \
+                   scripts/build-linux.sh scripts/check-upstream.sh \
+                   scripts/patch-vendor.cjs scripts/smoke-native.cjs \
+                   scripts/extract-icons.py \
+                   docs/design.md docs/design_CN.md \
+                   docs/verification.md docs/verification_CN.md \
+                   docs/screenshot-linux.png; do
+            [ -f "$f" ] || { echo "::error::missing $f"; exit 1; }
+          done
+          echo ok
