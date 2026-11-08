@@ -133,7 +133,7 @@ install_pkg() { # install_pkg <tarball> <node_modules dir>
   tar xzf "$tgz" -C "$tmp"
   name="$(node -p "require('$tmp/package/package.json').name")"
   version="$(node -p "require('$tmp/package/package.json').version")"
-  rm -rf "$nm/$name"
+  rm -rf "${nm:?}/${name:?}"
   mkdir -p "$(dirname "$nm/$name")"
   cp -a "$tmp/package" "$nm/$name"
   rm -rf "$tmp"
