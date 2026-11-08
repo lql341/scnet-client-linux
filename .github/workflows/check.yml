@@ -1,0 +1,26 @@
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax
+        run: |
+          bash -n build-linux.sh
+          bash -n check-upstream.sh
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -S warning build-linux.sh check-upstream.sh || true
+      - name: Ensure no vendor binaries are tracked
+        run: |
+          if git ls-files | grep -Ei '\.(zip|dmg|exe|deb|appimage|whl|tgz)$|^app/|^build/'; then
+            echo "vendor binary or build output tracked"; exit 1
+          fi
+          echo "ok"

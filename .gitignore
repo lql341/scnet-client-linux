@@ -1,0 +1,15 @@
+# 厂商二进制与构建产物（不入库）
+mac-x64.zip
+*.zip
+*.dmg
+*.exe
+*.deb
+*.AppImage
+app/
+asar/
+build/
+*.tar.gz
+*.whl
+*.tgz
+node_modules/
+.DS_Store
