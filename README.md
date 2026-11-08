@@ -4,6 +4,8 @@
 从官方 macOS Electron 包出发，替换掉平台相关的二进制与原生模块，产出可运行的
 便携目录和 Debian/Ubuntu 安装包。
 
+[English](README.en.md)
+
 > 仓库**不包含**任何厂商二进制或构建产物，只包含脚本、文档和截图。
 > 构建时由脚本从官方 CDN 下载 `SCNet-<version>-x64.zip`，请自行确认这样做
 > 符合你所在地区/场景对官方客户端的使用约定。
@@ -30,7 +32,12 @@
 sudo apt install ./scnet-client_4.1.0_amd64.deb   # 或安装 deb 后从菜单启动
 ```
 
-脚本是幂等的：中间产物缓存在 `build/cache/`、`build/work/`，重复执行只重建变化的部分。
+脚本是幂等的：中间产物缓存在 `build/cache/`、`build/work/`，重复执行只重建变化的部分；
+下载会用 `latest-mac.yml` 里的 SHA-512 校验，打包前还会自检 6 个必需的 Linux 原生产物。
+
+启动器会尽量保留 Chromium 沙箱（setuid `chrome-sandbox` 或非特权 user namespace，
+包括 Ubuntu 23.10+ 的 AppArmor 限制），只有两者都不可用时才退化为 `--no-sandbox`；
+`SCNET_NO_SANDBOX=1` 可强制退化。
 
 产物布局：
 

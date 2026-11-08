@@ -173,12 +173,30 @@ done
 # ------------------------------------------------------------------- 7. launcher
 cat > "$DIST/launcher.sh" <<'EOS'
 #!/bin/sh
+# 启动器：只有在沙箱确实不可用时才退化为 --no-sandbox
 APP="$(dirname "$(readlink -f "$0")")"
 SB="$APP/chrome-sandbox"
-if [ -u "$SB" ] && [ "$(stat -c %u "$SB" 2>/dev/null)" = "0" ]; then
-  exec "$APP/scnet-client" "$@"
+
+sandbox_usable() {
+  # 1) setuid root 的 chrome-sandbox
+  if [ -u "$SB" ] && [ "$(stat -c %u "$SB" 2>/dev/null)" = "0" ]; then
+    return 0
+  fi
+  # 2) 非特权 user namespace（Chromium 的 userns 沙箱）
+  [ "$(cat /proc/sys/user/max_user_namespaces 2>/dev/null || echo 0)" -gt 0 ] || return 1
+  case "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null)" in
+    0) return 1 ;;
+  esac
+  case "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null)" in
+    1) return 1 ;;   # Ubuntu 23.10+ 默认只允许带 profile 的程序建 userns
+  esac
+  return 0
+}
+
+if [ "${SCNET_NO_SANDBOX:-0}" = "1" ] || ! sandbox_usable; then
+  exec "$APP/scnet-client" --no-sandbox "$@"
 fi
-exec "$APP/scnet-client" --no-sandbox "$@"
+exec "$APP/scnet-client" "$@"
 EOS
 chmod +x "$DIST/launcher.sh"
 

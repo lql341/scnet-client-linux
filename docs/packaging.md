@@ -102,9 +102,12 @@ asar 完整性校验（fuses 里的 `EnableEmbeddedAsarIntegrityValidation`）�
 ## 8. 图标与启动器
 
 - 图标：`icon.icns` 是容器，内部是多个 PNG 块；脚本按 IHDR 宽高挑最大的（1024×1024）导出；
-- 启动器：优先用 setuid 的 `chrome-sandbox`；没有 setuid（普通用户解包运行）时退化为
+- 启动器：优先用 setuid 的 `chrome-sandbox`；其次用非特权 user namespace
+  （`/proc/sys/user/max_user_namespaces` > 0 且 `unprivileged_userns_clone` ≠ 0，
+  且 `apparmor_restrict_unprivileged_userns` ≠ 1）；两者都不可用时才退化为
   `--no-sandbox`，否则 Electron 会以
   `The SUID sandbox helper binary was found, but is not configured correctly` 退出。
+  可用 `SCNET_NO_SANDBOX=1` 强制退化（如远程桌面、容器里）。
 
 ## 9. deb 布局
 
@@ -132,6 +135,7 @@ asar 完整性校验（fuses 里的 `EnableEmbeddedAsarIntegrityValidation`）�
 | --- | --- |
 | `Not a directory` 加载 `.so` | asar 内路径无法 `dlopen`，确认 `--unpack-dir node_modules` 生效 |
 | `Failed to load native module: pty.node` | node-pty 没用 Electron 头文件编译，ABI 不匹配，重跑第 4 步 |
-| 启动即退出，提示 SUID sandbox | 用 `launcher.sh`，或 `chmod 4755 chrome-sandbox`（需 root） |
+| 启动即退出，提示 SUID sandbox | 用 `launcher.sh`（会自动判断）；或 `chmod 4755 chrome-sandbox`（需 root） |
+| 启动后无输出、退出码 0 | 已有实例在跑（单实例锁），不是崩溃 |
 | 界面空白 + cookie 警告 | 正常提示（`file://` 下不存 cookie），不影响功能 |
 | 托盘图标不显示 | 缺少 `libayatana-appindicator`/`libappindicator3`，装对应包 |
