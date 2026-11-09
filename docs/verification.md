@@ -7,19 +7,31 @@ verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session,
 
 ## 0. Version coverage
 
-Sections 1–7 record the initial 4.1.0-3 verification on the reference system. The 4.1.1 bump was
-re-checked on a second machine, Ubuntu 26.04.1 x86-64 with an X11 (XFCE) session:
+Sections 1–7 record the initial 4.1.0-3 verification on the reference system (Debian 13). The
+4.1.1 build was re-checked end to end on a second machine, Ubuntu 26.04.1 x86-64 with an X11
+(XFCE) session:
 
 | Re-checked | Result |
 | --- | --- |
 | Full pipeline (`scripts/build-linux.sh`) | exits 0, produces `scnet-client_4.1.1-1_amd64.deb` (195 MB) |
 | Section 1 smoke test | identical output; all seven checks pass |
 | Section 2, sign-in window | renders with title 「计算服务」 and class `scnet-client`, 1200×768; the vendor `.window-tools` cluster shows minimize and close, and the fallback stands down (no duplicates) |
+| Section 2, main route | with a copy of an existing 4.1.0 profile the dashboard renders on 4.1.1 (sidebar reports 「SCNet v4.1.1」); `.window-tools` count `0`, fallback mounted with three buttons |
+| Section 2, controls | maximize 1200×768 → 2560×1440 and back with the label switching to 还原/Restore; `wmctrl -b add,maximized_vert,maximized_horz` flips the glyph without a click; minimize sets `IsUnMapped` and `wmctrl -i -a` returns `IsViewable` |
+| Section 3, icons | `Gtk.IconTheme` resolves `scnet-client` at 16–512 px (1024 px falls back to the 512 px image, as expected) |
 | Section 4, sandbox probe | this host sets `kernel.apparmor_restrict_unprivileged_userns=1` and the portable `chrome-sandbox` is not setuid, so the launcher selects `--no-sandbox` as specified |
-| Section 5, packaging | `Version: 4.1.1-1`, 13 icon sizes, `desktop-file-validate` exits 0, the unpacked tree launches |
+| Section 5, packaging | `Version: 4.1.1-1`, 13 icon sizes, `desktop-file-validate` exits 0, `apt-get -s install` resolves the dependencies and proposes the 4.1.0-4 → 4.1.1-1 upgrade, and the unpacked tree launches |
+| Connector catalogue | the `#/mcp` page lists the service-side connectors (万方数据, Repilot, 智慧芽, BioBuddy, …) without the bundled `Resources/connectors` tree that 4.1.1 removed |
 
-Not re-executed for 4.1.1: the maximize/restore and main-route rows of section 2 (no session to log
-in with), section 3 icon resolution, and the `apt` install path. Those rows still describe 4.1.0-3.
+Still not re-executed for 4.1.1: the `apt` install itself (no root on the second machine either) and
+the tray indicator interaction. The 4.1.0-3 rows below remain as recorded.
+
+Two observations from the re-check that apply to both versions. Closing the main window through the
+vendor channel hides it rather than quitting — the window module installs
+`on("close", e => { hide(); e.preventDefault(); })` — so the process keeps running with no window
+until the tray icon or a relaunch brings it back; this is the same symptom as the windowless start
+in section 7. And the profile written by 4.1.0 loads unchanged in 4.1.1, with no visible migration
+prompt.
 
 ## 1. Automated checks in the build
 
@@ -88,8 +100,8 @@ renderer mounts no vendor cluster, so the fallback is the control surface there;
 is read from `window.is-maximized` and re-queried on resize.
 
 The maximize/restore rows were verified on a stage-6 repacked `app.asar` containing the updated
-script (the same artifact the pipeline produces), not on a rebuilt `.deb`; the packaging section
-below refers to the 4.1.0-3 package, with the 4.1.1-1 re-check in section 0.
+script (the same artifact the pipeline produces), not on a rebuilt `.deb`; section 5 refers to the
+4.1.0-3 package. Section 0 records the same rows re-verified on the 4.1.1 bundle.
 
 Not verified: appearance under a tiling window manager and fractional scaling. The sign-in window
 legitimately shows two controls rather than three: the vendor passes `showMax=false` and the window

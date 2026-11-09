@@ -181,8 +181,9 @@ scnet-client-linux/
 的部分做功能验证（`node-pty` 生成/读取/退出、`@napi-rs/canvas` PNG 编码、`ssh2`、
 `@ubjs/node`、`@trycua/cua-driver` 的 Rust `dlopen`，以及 `uv`、`agent-browser` 可执行文件）。
 
-交互验证在 Debian 13 x64/X11 上执行：窗口标题「计算服务」、尺寸 1200×768，右上角为最小化、
-最大化/还原与关闭；最大化经控件点击与窗口管理器两条路径验证，图标随之同步；最小化通过模拟点击验证；
+交互验证在 Debian 13 x64/X11 上针对 4.1.0 执行，并在 Ubuntu 26.04.1 x64/X11 上针对 4.1.1 重做：
+窗口标题「计算服务」、尺寸 1200×768，右上角为最小化、最大化/还原与关闭；最大化经控件点击与
+窗口管理器两条路径验证，图标随之同步，登录页与登录后的主路由都覆盖到；最小化通过模拟点击验证；
 图标经 `Gtk.IconTheme` 在 7 个尺寸下解析成功，且解包 `.deb` 后行为相同。命令与结果见
 [`docs/verification_CN.md`](docs/verification_CN.md)。
 
@@ -195,6 +196,7 @@ scnet-client-linux/
 | 自动更新 | 不可用：更新源仅提供 macOS/Windows 产物，`electron-updater` 也无法替换 Linux 包体。升级方式为重新构建 |
 | 代码签名 | 无 |
 | 托盘图标 | 需要 `libayatana-appindicator3` 或 `libappindicator3` |
+| 关闭主窗口 | 隐藏到托盘而非退出（厂商 `close` 处理）；无托盘指示器的环境下进程继续无窗口运行 |
 | 平铺窗口管理器、分数缩放 | 未验证；最大化按钮依赖窗口管理器对 frameless 窗口的处理 |
 | 同一配置目录多实例 | 受单实例锁与会话恢复影响，偶发无窗口启动；终止残留实例后重试 |
 | 厂商支持 | 无；这不是官方发行版 |

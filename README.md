@@ -195,11 +195,12 @@ artifact and exercises the ones testable without a display (`node-pty` spawn/rea
 `@napi-rs/canvas` PNG encode, `ssh2`, `@ubjs/node`, `@trycua/cua-driver` Rust `dlopen`, plus the
 `uv` and `agent-browser` executables).
 
-Interactive verification was performed on Debian 13 x64/X11: window titled 计算服务 at 1200×768
-with minimize, maximize/restore and close at the top right; maximize was verified both through the
-control and through the window manager, with the glyph following the state. Minimize was verified
-by simulated click, icon resolution through `Gtk.IconTheme` at seven sizes, and the same behaviour
-after unpacking the `.deb`. Procedure, commands and results:
+Interactive verification was performed on Debian 13 x64/X11 for 4.1.0 and repeated on Ubuntu 26.04.1
+x64/X11 for 4.1.1: window titled 计算服务 at 1200×768 with minimize, maximize/restore and close at
+the top right; maximize was verified both through the control and through the window manager, with
+the glyph following the state, on the sign-in route and on the logged-in main route. Minimize was
+verified by simulated click, icon resolution through `Gtk.IconTheme` at seven sizes, and the same
+behaviour after unpacking the `.deb`. Procedure, commands and results:
 [`docs/verification.md`](docs/verification.md).
 
 ## Known limitations
@@ -211,6 +212,7 @@ after unpacking the `.deb`. Procedure, commands and results:
 | Auto-update | Not functional: the update feed serves macOS/Windows artifacts, and `electron-updater` cannot replace a Linux bundle. Upgrade by rebuilding |
 | Code signing | None |
 | Tray icon | Requires `libayatana-appindicator3` or `libappindicator3` |
+| Closing the main window | Hides to the tray instead of quitting (vendor `close` handler); on a host without an indicator the process keeps running windowless |
 | Tiling window managers, fractional scaling | Not verified; the maximize control relies on how the window manager treats a frameless window |
 | Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
 | Vendor support | None; not an official distribution |
