@@ -126,8 +126,10 @@ functionality is lost beyond throughput on bulk transfers.
 
 The vendor draws its own minimize/maximize/close cluster (`WindowTools`) inside the application
 shell, and only asks the platform for buttons on macOS (traffic lights) and Windows
-(`titleBarOverlay`). Linux gets the in-page cluster, but the sign-in route has no shell, so the
-sign-in window had no controls at all.
+(`titleBarOverlay`). Linux has neither a system title bar nor platform buttons, and the vendor
+cluster only renders in the sign-in page (`AuthShell`, with `showMax=false`) and in the legacy
+`compat` shell's `AppWindowHeader`; the current renderer's main route does not render it, so both
+the sign-in and the main window can end up without controls.
 
 Enabling the Chromium overlay for Linux was tried and rejected: it draws a second set of buttons
 on top of the vendor glyphs, and because the overlay colour is fully transparent the vendor glyphs
@@ -140,10 +142,11 @@ missing:
 | --- | --- | --- |
 | `login-window-controls` | `dist/index.html`, `dist/compat/index.html` | loads `window-controls.js` |
 
-[`scripts/window-controls.js`](scripts/window-controls.js) renders a minimize/close pair through
-the existing preload bridge (`host.invoke('window.minimize')`,
-`host.invoke('window.request-main-close')`) **only while no `.window-tools` element exists**, and
-removes itself once the shell renders the vendor cluster. It is inert on other platforms, so there
+[`scripts/window-controls.js`](scripts/window-controls.js) renders minimize, maximize/restore and
+close **only while no `.window-tools` element exists**, and removes itself once the shell renders
+the vendor cluster. The maximize state is read through `host.invoke('window.is-maximized')` and
+re-queried after a click and on resize, so a maximize performed by the window manager (double-click
+on the drag strip, Super+Up) does not leave a stale glyph. It is inert on other platforms, so there
 is exactly one set of controls at any time.
 
 `app.asar` is otherwise reused byte for byte: this is the only modification to the vendor tree,
@@ -171,6 +174,7 @@ scnet-client-linux/
 │   ├── build-linux.sh             Build pipeline (8 stages, idempotent)
 │   ├── check-upstream.sh          Compare target with the live vendor feed
 │   ├── patch-vendor.cjs           Window-decoration patches (exact match, fails on drift)
+│   ├── window-controls.js         Linux fallback window controls (min/max/close)
 │   ├── smoke-native.cjs           Native artifact smoke test (runs inside the build)
 │   └── extract-icons.py           Icon set extraction and resampling from .icns
 ├── docs/
@@ -191,10 +195,11 @@ artifact and exercises the ones testable without a display (`node-pty` spawn/rea
 `@napi-rs/canvas` PNG encode, `ssh2`, `@ubjs/node`, `@trycua/cua-driver` Rust `dlopen`, plus the
 `uv` and `agent-browser` executables).
 
-Interactive verification was performed on Debian 13 x64/X11: window titled 计算服务 at 1200×741
-with minimize/close at the top right (maximize additionally on resizable windows), minimize
-verified by simulated click, icon resolution verified through `Gtk.IconTheme` at seven sizes, and
-the same behaviour after unpacking the `.deb`. Procedure, commands and results:
+Interactive verification was performed on Debian 13 x64/X11: window titled 计算服务 at 1200×768
+with minimize, maximize/restore and close at the top right; maximize was verified both through the
+control and through the window manager, with the glyph following the state. Minimize was verified
+by simulated click, icon resolution through `Gtk.IconTheme` at seven sizes, and the same behaviour
+after unpacking the `.deb`. Procedure, commands and results:
 [`docs/verification.md`](docs/verification.md).
 
 ## Known limitations
@@ -206,7 +211,7 @@ the same behaviour after unpacking the `.deb`. Procedure, commands and results:
 | Auto-update | Not functional: the update feed serves macOS/Windows artifacts, and `electron-updater` cannot replace a Linux bundle. Upgrade by rebuilding |
 | Code signing | None |
 | Tray icon | Requires `libayatana-appindicator3` or `libappindicator3` |
-| Maximize button after sign-in | Not observed directly; the window is created with `maximizable: true` and the login window legitimately disallows maximize |
+| Tiling window managers, fractional scaling | Not verified; the maximize control relies on how the window manager treats a frameless window |
 | Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
 | Vendor support | None; not an official distribution |
 
@@ -217,7 +222,7 @@ the same behaviour after unpacking the `.deb`. Procedure, commands and results:
    `latest-mac.yml`).
 3. If the bundled Electron version changed (`Frameworks/Electron Framework.framework/Versions/A/
    Resources/Info.plist`), update `ELECTRON_VERSION`; `node-pty` is recompiled automatically.
-   Re-check that the three patterns in `scripts/patch-vendor.cjs` still exist — the build fails if
+   Re-check that the patch patterns in `scripts/patch-vendor.cjs` still exist — the build fails if
    they do not, and the new window code has to be re-derived rather than ignored.
 4. Reconcile the native module versions with the new `app.asar/package.json`
    (`CANVAS_VERSION`, `CUA_DRIVER_VERSION`, `UBJS_VERSION`, `NODE_PTY_VERSION`,

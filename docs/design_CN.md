@@ -207,8 +207,9 @@ let a="darwin"===s.H.context.platform, t="win32"===s.H.context.platform&&s.H.con
 return (s,b) => a||t ? null : h("div", {class:"window-tools …"}, [ … min / max / close … ])
 ```
 
-因此在 Linux 上该控件簇会渲染，按钮本身可用——但只在应用外壳内。登录路由使用另一套布局，不包含
-`WindowTools`，所以登录窗口完全没有最小化与关闭控件。
+因此在 Linux 上，只要挂载了该组件（登录页 `AuthShell`，且 `showMax=false`；以及旧版 `compat`
+外壳的 `AppWindowHeader`）控件簇就会渲染，按钮本身可用。但当前渲染器的主路由根本没有挂载
+`WindowTools`，所以在 Linux 上主窗口与登录窗口都可能完全没有控件。
 
 **尝试并否决的方案：Chromium 覆盖层。** 为 Linux 启用 `titleBarOverlay`（并在两个渲染层中预留
 36 px）后出现了两套重叠控件：Chromium 的圆形按钮压在厂商 `WindowTools` 字形之上。覆盖层背景色为
@@ -223,12 +224,15 @@ return (s,b) => a||t ? null : h("div", {class:"window-tools …"}, [ … min / m
 | `login-window-controls` | `dist/index.html`、`dist/compat/index.html` | 加载 `window-controls.js` |
 
 [`scripts/window-controls.js`](../scripts/window-controls.js) 观察文档变化，仅在**不存在
-`.window-tools` 元素时**通过既有 preload 桥（`host.invoke('window.minimize')`、
-`host.invoke('window.request-main-close')`）渲染最小化与关闭两个按钮，一旦外壳渲染出厂商控件簇
-即自行移除。它在其他平台不生效，也不会在已有控件的窗口上重复添加，因此任一时刻只有一套控件。
+`.window-tools` 元素时**渲染最小化、最大化/还原与关闭三个按钮，一旦外壳渲染出厂商控件簇即自行
+移除。最大化图标与提示跟随 `host.invoke('window.is-maximized')`：点击后与窗口尺寸变化时都会重新
+查询，因此窗口管理器发起的最大化（双击拖动区、Super+Up）也能正确反映。它在其他平台不生效，也不会
+在已有控件的窗口上重复添加，因此任一时刻只有一套控件。
 
-Linux 上的结果：登录窗口右上角为最小化与关闭（该窗口本身不允许最大化）；登录后应用头部内为厂商
-完整的最小化/最大化/关闭控件簇。
+Linux 上的结果：当前主路由没有厂商控件簇，由后备实现提供右上角的最小化/最大化/关闭（实测
+1200×768 → 1920×1047 并可还原）；在挂载了厂商 `WindowTools` 的页面（登录页 `AuthShell` 与
+旧版 compat 头部）后备实现自行退出，厂商字形仍是唯一控件；登录页因厂商传入 `showMax=false`
+只显示最小化与关闭。
 
 ## 5. asar 重打包
 

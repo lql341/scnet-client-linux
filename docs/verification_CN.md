@@ -56,12 +56,21 @@ all checks passed
 | 恢复生效 | `_NET_ACTIVE_WINDOW` 后回到 `IsViewable` |
 | 悬停状态 | 指针移到控件上会出现悬停底色，确认命中区域 |
 | 后备控件簇 | 存在 `.window-tools` 时 `window-controls.js` 报告 `hasRoot: false`，即自行退出 |
+| 主路由控件簇 | 当前渲染器主路由 `.window-tools` 数量为 `0`，由后备实现挂载三个按钮 |
+| 通过控件最大化 | DevTools 协议点击：`window.is-maximized` false→true，视口 1200×768→1920×1047，图标与提示变为「还原 / Restore」 |
+| 通过控件还原 | 再次点击回到 1200×768，图标恢复为最大化 |
+| 窗口管理器最大化 | `wmctrl -b add,maximized_vert,maximized_horz` 不经点击即把图标切为「还原」；移除状态后恢复 |
 
 通过 DevTools 协议检查 DOM 确认：登录窗口渲染了厂商的 `.window-tools`（`.min item … size-30px`），
-且发布的包内 `function y()` 在 Linux 返回 `undefined`，即未启用 Chromium 覆盖层。
+且发布的包内 `function y()` 在 Linux 返回 `undefined`，即未启用 Chromium 覆盖层。当前渲染器的主路由
+不挂载厂商控件簇，因此那里的控件面就是后备实现；其最大化状态从 `window.is-maximized` 读取，并在
+尺寸变化时重新查询。
 
-未验证：平铺窗口管理器下的表现、分数缩放，以及登录后窗口的最大化控件（登录不在本次范围内；登录
-窗口以 `maximizable: false` 创建，因此只显示两个控件）。
+最大化/还原相关的行是在 stage 6 重打包的 `app.asar`（含更新后的脚本，与流水线产物一致）上验证的，
+不是在重新构建的 `.deb` 上；下文的打包一节对应 4.1.0-3 包。
+
+未验证：平铺窗口管理器下的表现与分数缩放。登录窗口只显示两个控件是厂商设计：`showMax=false`，且
+窗口以 `maximizable: false` 创建。
 
 ## 3. 图标集成
 
@@ -97,7 +106,7 @@ all checks passed
 | --- | --- |
 | `dpkg-deb -c` 布局 | `/opt/scnet-client`、`/usr/bin/scnet-client` 软链、桌面入口、13 个图标尺寸 |
 | 解包后启动 | 从解包目录可正常出窗口 |
-| 版本 | `4.1.0-2` |
+| 版本 | `4.1.0-3` |
 | 依赖 | 同时列出 `t64` 与旧包名，覆盖 Debian 12/13 与 Ubuntu 22.04/24.04 |
 
 ## 6. 可重复性

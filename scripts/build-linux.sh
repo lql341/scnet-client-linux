@@ -27,7 +27,7 @@ DIST="$BUILD/linux"
 
 # Versions. Everything except APP_VERSION can be overridden from the environment.
 APP_VERSION="${APP_VERSION:-$(cat "$ROOT/VERSION")}"
-DEB_REVISION="${DEB_REVISION:-3}"   # packaging revision, independent of the upstream version
+DEB_REVISION="${DEB_REVISION:-4}"   # packaging revision, independent of the upstream version
 ELECTRON_VERSION="${ELECTRON_VERSION:-44.7.0}"
 CANVAS_VERSION="${CANVAS_VERSION:-1.0.2}"
 CUA_DRIVER_VERSION="${CUA_DRIVER_VERSION:-0.34.1}"

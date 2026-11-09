@@ -6,7 +6,7 @@
 Electron 发行包，转换为可运行的 Linux x64 构建流水线。
 
 当前目标版本：**4.1.0**（Electron **44.7.0**），见 [`VERSION`](VERSION)。
-打包修订号见 `DEB_REVISION`（当前 `4.1.0-2`，修复菜单图标与窗口按钮）。
+打包修订号见 `DEB_REVISION`（当前 `4.1.0-4`，新增最大化/还原按钮）。
 
 ```bash
 scripts/check-upstream.sh   # 对比本仓库目标版本与线上发行源
@@ -119,8 +119,9 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 ## 窗口控件与厂商代码补丁
 
 厂商在应用外壳内自绘最小化/最大化/关闭控件簇（`WindowTools`），只在 macOS（红绿灯）与
-Windows（`titleBarOverlay`）上向平台索取按钮。Linux 走页面内控件簇，但登录路由没有外壳，因此
-登录窗口完全没有控件。
+Windows（`titleBarOverlay`）上向平台索取按钮。Linux 既没有系统标题栏，也没有平台按钮；而厂商
+控件簇只出现在登录页（`AuthShell`，且 `showMax=false`）与旧版 `compat` 外壳的 `AppWindowHeader`
+中，当前渲染器的主路由并不渲染它，因此主窗口与登录窗口都可能完全没有控件。
 
 为 Linux 启用 Chromium 覆盖层曾被尝试并否决：它会在厂商字形之上再画一套按钮，而覆盖层背景全透明，
 厂商字形会与平台按钮并列显示。
@@ -132,8 +133,10 @@ Windows（`titleBarOverlay`）上向平台索取按钮。Linux 走页面内控�
 | `login-window-controls` | `dist/index.html`、`dist/compat/index.html` | 加载 `window-controls.js` |
 
 [`scripts/window-controls.js`](scripts/window-controls.js) 仅在**不存在 `.window-tools` 元素时**
-通过既有 preload 桥（`host.invoke('window.minimize')`、`host.invoke('window.request-main-close')`）
-渲染最小化与关闭，一旦外壳渲染出厂商控件簇即自行移除。它在其他平台不生效，因此任一时刻只有一套控件。
+通过既有 preload 桥渲染最小化、最大化/还原与关闭三个按钮，一旦外壳渲染出厂商控件簇即自行移除。
+最大化状态经 `host.invoke('window.is-maximized')` 读取：点击后、以及窗口尺寸变化时（窗口管理器
+双击标题栏拖动区或快捷键最大化）都会重新查询，因此图标与提示不会停留在旧状态。它在其他平台不
+生效，因此任一时刻只有一套控件。
 
 除此之外 `app.asar` 逐字节沿用：这是对厂商目录树的唯一改动，且为增量改动（一个 `index.html`
 标签加一个新文件）。
@@ -159,6 +162,7 @@ scnet-client-linux/
 │   ├── build-linux.sh             构建流水线（8 个阶段，幂等）
 │   ├── check-upstream.sh          对比目标版本与线上发行源
 │   ├── patch-vendor.cjs           窗口装饰补丁（精确匹配，漂移即失败）
+│   ├── window-controls.js         Linux 后备窗口控件（最小化/最大化/关闭）
 │   ├── smoke-native.cjs           原生产物冒烟测试（构建过程中执行）
 │   └── extract-icons.py           从 .icns 提取并重采样图标集
 ├── docs/
@@ -177,9 +181,9 @@ scnet-client-linux/
 的部分做功能验证（`node-pty` 生成/读取/退出、`@napi-rs/canvas` PNG 编码、`ssh2`、
 `@ubjs/node`、`@trycua/cua-driver` 的 Rust `dlopen`，以及 `uv`、`agent-browser` 可执行文件）。
 
-交互验证在 Debian 13 x64/X11 上执行：窗口标题「计算服务」、尺寸 1200×741，右上角为最小化与
-关闭（可缩放窗口另有最大化），最小化通过模拟点击验证，图标经 `Gtk.IconTheme` 在 7 个尺寸下
-解析成功，且解包 `.deb` 后行为相同。命令与结果见
+交互验证在 Debian 13 x64/X11 上执行：窗口标题「计算服务」、尺寸 1200×768，右上角为最小化、
+最大化/还原与关闭；最大化经控件点击与窗口管理器两条路径验证，图标随之同步；最小化通过模拟点击验证；
+图标经 `Gtk.IconTheme` 在 7 个尺寸下解析成功，且解包 `.deb` 后行为相同。命令与结果见
 [`docs/verification_CN.md`](docs/verification_CN.md)。
 
 ## 已知限制
@@ -191,7 +195,7 @@ scnet-client-linux/
 | 自动更新 | 不可用：更新源仅提供 macOS/Windows 产物，`electron-updater` 也无法替换 Linux 包体。升级方式为重新构建 |
 | 代码签名 | 无 |
 | 托盘图标 | 需要 `libayatana-appindicator3` 或 `libappindicator3` |
-| 登录后的最大化按钮 | 未直接观察；窗口以 `maximizable: true` 创建，而登录窗口本身不允许最大化 |
+| 平铺窗口管理器、分数缩放 | 未验证；最大化按钮依赖窗口管理器对 frameless 窗口的处理 |
 | 同一配置目录多实例 | 受单实例锁与会话恢复影响，偶发无窗口启动；终止残留实例后重试 |
 | 厂商支持 | 无；这不是官方发行版 |
 
@@ -201,7 +205,7 @@ scnet-client-linux/
 2. 更新 `VERSION` 与 `MAC_ZIP_SHA512`（x64 zip 的 SHA-512，由 `latest-mac.yml` 的 base64 解码）。
 3. 若内置 Electron 版本变化（`Frameworks/Electron Framework.framework/Versions/A/Resources/
    Info.plist`），更新 `ELECTRON_VERSION`；`node-pty` 会自动重编译。同时确认
-   `scripts/patch-vendor.cjs` 的三个模式仍存在——缺失时构建会失败，需要按新的窗口代码重新推导，
+   `scripts/patch-vendor.cjs` 的补丁模式仍存在——缺失时构建会失败，需要按新的窗口代码重新推导，
    而不是忽略。
 4. 依据新的 `app.asar/package.json` 对齐原生模块版本（`CANVAS_VERSION`、
    `CUA_DRIVER_VERSION`、`UBJS_VERSION`、`NODE_PTY_VERSION`、`AGENT_BROWSER_VERSION`、

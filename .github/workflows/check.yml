@@ -20,6 +20,7 @@ jobs:
         run: |
           node --check scripts/patch-vendor.cjs
           node --check scripts/smoke-native.cjs
+          node --check scripts/window-controls.js
 
       - name: Python syntax
         run: python3 -m py_compile scripts/extract-icons.py
@@ -55,7 +56,7 @@ jobs:
           for f in VERSION README.md README_CN.md LICENSE \
                    scripts/build-linux.sh scripts/check-upstream.sh \
                    scripts/patch-vendor.cjs scripts/smoke-native.cjs \
-                   scripts/extract-icons.py \
+                   scripts/window-controls.js scripts/extract-icons.py \
                    docs/design.md docs/design_CN.md \
                    docs/verification.md docs/verification_CN.md \
                    docs/screenshot-linux.png; do

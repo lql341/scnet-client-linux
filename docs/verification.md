@@ -60,14 +60,24 @@ terminated first.
 | Restore works | `_NET_ACTIVE_WINDOW` returns the window to `IsViewable` |
 | Hover state | pointer over a control paints its hover background, confirming hit targets |
 | Fallback cluster | `window-controls.js` reported `hasRoot: false` while `.window-tools` was present, i.e. it stands down |
+| Main-route cluster | on the current renderer's main route `.window-tools` count is `0` and the fallback is mounted with three buttons |
+| Maximize via control | DevTools-protocol click: `window.is-maximized` false→true, viewport 1200×768→1920×1047, glyph/title switch to 还原/Restore |
+| Restore via control | second click returns to 1200×768 and the maximize glyph |
+| WM-initiated maximize | `wmctrl -b add,maximized_vert,maximized_horz` flips the glyph to 还原 without a click; removing the state restores it |
 
 DOM inspection through the DevTools protocol confirmed that the sign-in window renders the vendor
 `.window-tools` element (`.min item … size-30px`) and that no Chromium overlay is active
-(`function y()` returns `undefined` on Linux in the shipped bundle).
+(`function y()` returns `undefined` on Linux in the shipped bundle). The main route of the current
+renderer mounts no vendor cluster, so the fallback is the control surface there; its maximize state
+is read from `window.is-maximized` and re-queried on resize.
 
-Not verified: appearance under a tiling window manager, fractional scaling, and the maximize
-control on the post-login window (sign-in was out of scope; the sign-in window is created with
-`maximizable: false`, which is why it shows two controls rather than three).
+The maximize/restore rows were verified on a stage-6 repacked `app.asar` containing the updated
+script (the same artifact the pipeline produces), not on a rebuilt `.deb`; the packaging section
+below refers to the 4.1.0-3 package.
+
+Not verified: appearance under a tiling window manager and fractional scaling. The sign-in window
+legitimately shows two controls rather than three: the vendor passes `showMax=false` and the window
+is created with `maximizable: false`.
 
 ## 3. Icon integration
 
@@ -106,7 +116,7 @@ then force the fallback with `SCNET_NO_SANDBOX=1`.
 | --- | --- |
 | `dpkg-deb -c` layout | `/opt/scnet-client`, `/usr/bin/scnet-client` symlink, desktop entry, 13 icon sizes |
 | Unpack and launch | window appears from the unpacked tree |
-| Version | `4.1.0-2` |
+| Version | `4.1.0-3` |
 | Dependencies | both `t64` and pre-`t64` names, so Debian 12/13 and Ubuntu 22.04/24.04 resolve |
 
 ## 6. Reproducibility

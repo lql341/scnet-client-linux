@@ -31,8 +31,8 @@ const PATCHES = [
     script: path.join(HERE, 'window-controls.js'),
     tag: '<script src="./window-controls.js"></script>',
     summary:
-      'load the Linux fallback window controls; the script removes itself once ' +
-      'the application shell renders its own control cluster',
+      'load the Linux fallback window controls (minimize, maximize/restore, close); ' +
+      'the script removes itself once the application shell renders its own cluster',
   },
 ];
 
@@ -70,9 +70,17 @@ function applyAppendScript(appDir, patch, checkOnly) {
     const scriptTarget = path.join(path.dirname(file), scriptName);
 
     if (html.includes(patch.tag)) {
-      if (!fs.existsSync(scriptTarget) && !checkOnly) {
-        fs.copyFileSync(patch.script, scriptTarget);
+      // Keep the injected script in sync even when the tag was added by an
+      // earlier run (an updated script must not be silently ignored).
+      const expected = fs.readFileSync(patch.script);
+      const current = fs.existsSync(scriptTarget) ? fs.readFileSync(scriptTarget) : null;
+      if (current && current.equals(expected)) continue;
+      if (checkOnly) {
+        console.log(`todo ${patch.id}: ${path.relative(appDir, scriptTarget)} is stale`);
+        changed += 1;
+        continue;
       }
+      fs.copyFileSync(patch.script, scriptTarget);
       continue;
     }
 

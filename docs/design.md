@@ -221,9 +221,10 @@ let a="darwin"===s.H.context.platform, t="win32"===s.H.context.platform&&s.H.con
 return (s,b) => a||t ? null : h("div", {class:"window-tools …"}, [ … min / max / close … ])
 ```
 
-On Linux that cluster is therefore rendered, and it does provide working buttons — but only in the
-application shell. The sign-in route uses a different layout that does not include `WindowTools`,
-so the sign-in window had no minimize or close control at all.
+On Linux that cluster is therefore rendered wherever the component is mounted — the sign-in
+`AuthShell` (with `showMax=false`) and the legacy `compat` shell's `AppWindowHeader`. It does
+provide working buttons there, but the current renderer's main route mounts no `WindowTools` at
+all, so both the main window and the sign-in window could end up without controls on Linux.
 
 **Attempted and rejected: the Chromium overlay.** Enabling `titleBarOverlay` for Linux (and the
 in-app chrome that reserves 36 px for it in both renderers) produced two overlapping sets of
@@ -239,15 +240,19 @@ remains the primary control surface — and add a fallback only where the cluste
 | --- | --- | --- |
 | `login-window-controls` | `dist/index.html`, `dist/compat/index.html` | loads `window-controls.js` |
 
-[`scripts/window-controls.js`](../scripts/window-controls.js) watches the document and renders a
-minimize/close pair through the existing preload bridge (`host.invoke('window.minimize')`,
-`host.invoke('window.request-main-close')`) **only while no `.window-tools` element exists**, and
-removes itself as soon as the shell renders the vendor cluster. It is inert on other platforms and
-adds no controls to windows that already have them, so there is exactly one cluster at any time.
+[`scripts/window-controls.js`](../scripts/window-controls.js) watches the document and renders
+minimize, maximize/restore and close **only while no `.window-tools` element exists**, and removes
+itself as soon as the shell renders the vendor cluster. The maximize glyph and label follow
+`host.invoke('window.is-maximized')`: they are refreshed after a click and on resize, so a maximize
+performed by the window manager (double-click on the drag strip, Super+Up) is reflected too. The
+script is inert on other platforms and adds no controls to windows that already have them, so there
+is exactly one cluster at any time.
 
-The result on Linux: minimize and close at the top right on the sign-in window (the window is not
-maximizable there), and the vendor's full minimize/maximize/close cluster inside the application
-header after sign-in.
+The result on Linux: on the current main route, where the vendor cluster is absent, the fallback
+provides minimize/maximize/close at the top right (verified: 1200×768 → 1920×1047 and back). Where
+the vendor `WindowTools` is mounted — the sign-in `AuthShell` and the legacy compat header — the
+fallback stands down and the vendor glyphs remain the only controls; the sign-in window shows
+minimize and close because the vendor passes `showMax=false` there.
 
 ## 5. asar repacking
 
