@@ -23,7 +23,6 @@ scripts/check-upstream.sh   # 对比本仓库目标版本与线上发行源
 - 将 Electron 运行时、原生 node 模块与独立可执行文件替换为 Linux 版本；
 - 重新打包 `app.asar`，使 Linux 原生产物可被正确解析；
 - 打包：便携目录、`.deb`、桌面入口、非特权启动器；
-- 将厂商 macOS 构建原样重新打包为 `x64` 与 `arm64`（`scripts/build-macos.sh`）；
 - 记录已验证内容、验证方式与未知项。
 
 不包含：
@@ -40,14 +39,12 @@ SHA-512 校验。[Releases](https://github.com/lql341/scnet-client-linux/release
 
 | 组件 | 版本 / 说明 |
 | --- | --- |
-| 主机（Linux 目标） | Debian 12/13 或 Ubuntu 22.04/24.04，x86-64 |
+| 主机 | Debian 12/13 或 Ubuntu 22.04/24.04，x86-64 |
 | 构建工具 | `bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot` |
 | 磁盘 | `build/work` 与 `build/cache` 约 3 GB，产物约 750 MB |
 | 网络 | 厂商 CDN（`dlcdn.scnet.cn`）、npm registry、PyPI 镜像、Electron 镜像 |
-| 主机（macOS 目标） | macOS 13+（arm64 或 x64）用于签名与 `.dmg`；下载/校验/复制阶段也可在其他系统上跑 |
 
-Windows 不作为构建主机支持。Linux 目标无法在 macOS 上构建：`node-pty` 要按 Electron 头文件
-编译，且依赖 `dpkg-deb`/`fakeroot`。
+Windows 与 macOS 不作为构建主机支持。
 
 ## 构建
 
@@ -57,10 +54,6 @@ cd scnet-client-linux
 scripts/build-linux.sh                 # 完整流水线，缓存已就绪时约 5 分钟
 scripts/build-linux.sh --portable-only # 跳过 .deb
 scripts/build-linux.sh --clean         # 先清空 build/
-
-scripts/build-macos.sh                 # macOS，默认本机架构
-scripts/build-macos.sh --arch all      # x64 与 arm64
-scripts/build-macos.sh --dmg           # 同时生成 .dmg（仅 macOS）
 ```
 
 流水线可重复执行：下载缓存在 `build/cache/`，中间产物在 `build/work/`，产物已存在的阶段会跳过。
@@ -90,10 +83,6 @@ build/linux/                                便携目录
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
 scnet-client_4.1.1-1_amd64.deb
-
-build/macos/                                macOS 目标（厂商应用原样）
-├── x64/计算服务.app  arm64/计算服务.app
-└── scnet-client_4.1.1_macos-{x64,arm64}.zip(.sha256)
 ```
 
 ### 运行
@@ -108,26 +97,6 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 都不可用时才退化为 `--no-sandbox`。`SCNET_NO_SANDBOX=1` 可强制退化。
 
 配置写入 `~/.sclaw/`，与 macOS、Windows 版本一致。
-
-### macOS
-
-macOS 无需移植：厂商发行包本身就是原生且已签名的应用。`scripts/build-macos.sh` 按指定架构下载
-归档、按 `latest-mac.yml` 的 SHA-512 校验、核对 bundle 标识与版本，再以固定命名重新打包。
-**不做任何补丁**——窗口控件补充只对 Linux 有意义（macOS 有交通灯），而重写 `app.asar` 会同时破坏
-厂商代码签名与 `Info.plist` 中的 `ElectronAsarIntegrity` 值，而该值并不是归档文件的普通 SHA-256。
-
-```bash
-scripts/build-macos.sh --arch all      # 产物：build/macos/scnet-client_<ver>_macos-{x64,arm64}.zip
-```
-
-把 `计算服务.app` 复制到 `/Applications`；下载来的副本首次启动仍需绕过 Gatekeeper：
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/计算服务.app"
-```
-
-在 macOS 主机上脚本还会校验厂商签名，仅当校验失败时才做 ad-hoc 重签（`codesign --sign -`）；
-`--dmg` 会额外用 `hdiutil` 生成 `.dmg`。
 
 ## 替换项
 
@@ -229,7 +198,6 @@ scnet-client-linux/
 | 托盘图标 | 需要 `libayatana-appindicator3` 或 `libappindicator3` |
 | 关闭主窗口 | 隐藏到托盘而非退出（厂商 `close` 处理）；无托盘指示器的环境下进程继续无窗口运行 |
 | 平铺窗口管理器、分数缩放 | 未验证；最大化按钮依赖窗口管理器对 frameless 窗口的处理 |
-| macOS 产物 | 厂商应用原样重新打包，本项目不再签名；脚本已在 Linux 上对两种架构验证，但未在 macOS 实机运行 |
 | 同一配置目录多实例 | 受单实例锁与会话恢复影响，偶发无窗口启动；终止残留实例后重试 |
 | 厂商支持 | 无；这不是官方发行版 |
 
@@ -237,19 +205,18 @@ scnet-client-linux/
 
 1. `scripts/check-upstream.sh` 给出新版本与文件清单。
 2. 更新 `VERSION` 与 `MAC_ZIP_SHA512`（x64 zip 的 SHA-512，由 `latest-mac.yml` 的 base64 解码）。
-3. 同时更新 `scripts/build-macos.sh` 中的 `MAC_SHA512_ARM64`——macOS 每个架构一个校验值。
-4. 若内置 Electron 版本变化（`Frameworks/Electron Framework.framework/Versions/A/Resources/
+3. 若内置 Electron 版本变化（`Frameworks/Electron Framework.framework/Versions/A/Resources/
    Info.plist`），更新 `ELECTRON_VERSION`；`node-pty` 会自动重编译。同时确认
    `scripts/patch-vendor.cjs` 的补丁模式仍存在——缺失时构建会失败，需要按新的窗口代码重新推导，
    而不是忽略。
-5. 依据新的 `app.asar/package.json` 对齐原生模块版本（`CANVAS_VERSION`、
+4. 依据新的 `app.asar/package.json` 对齐原生模块版本（`CANVAS_VERSION`、
    `CUA_DRIVER_VERSION`、`UBJS_VERSION`、`NODE_PTY_VERSION`、`AGENT_BROWSER_VERSION`、
    `UV_VERSION`）。
-6. 对比新旧 `Resources/` 目录树：阶段 6 会复制 `agent-plugins`、`agent-skills`、`cli`、`cua`、
+5. 对比新旧 `Resources/` 目录树：阶段 6 会复制 `agent-plugins`、`agent-skills`、`cli`、`cua`、
    `en.lproj`、`tray*.png`、`app-update.yml` 与 OAuth 相关图片；上游新增、改名或删除的条目
    （4.1.1 删除了 `connectors/`、`home-scenarios/`，新增两个 OAuth PNG）必须与该清单对齐，
    否则 `cp -a` 会使构建失败。
-7. 重新构建；内置冒烟测试必须通过，然后按 [`docs/verification_CN.md`](docs/verification_CN.md)
+6. 重新构建；内置冒烟测试必须通过，然后按 [`docs/verification_CN.md`](docs/verification_CN.md)
    重做交互验证。
 
 若上游新增原生依赖（`.node`、`.so`），必须补齐对应的官方 `linux-x64-gnu` 变体，否则相关功能

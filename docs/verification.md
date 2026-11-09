@@ -7,7 +7,7 @@ verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session,
 
 ## 0. Version coverage
 
-Sections 1–6 record the initial 4.1.0-3 verification on the reference system (Debian 13). The
+Sections 1–7 record the initial 4.1.0-3 verification on the reference system (Debian 13). The
 4.1.1 build was re-checked end to end on a second machine, Ubuntu 26.04.1 x86-64 with an X11
 (XFCE) session:
 
@@ -30,7 +30,7 @@ Two observations from the re-check that apply to both versions. Closing the main
 vendor channel hides it rather than quitting — the window module installs
 `on("close", e => { hide(); e.preventDefault(); })` — so the process keeps running with no window
 until the tray icon or a relaunch brings it back; this is the same symptom as the windowless start
-in section 8. And the profile written by 4.1.0 loads unchanged in 4.1.1, with no visible migration
+in section 7. And the profile written by 4.1.0 loads unchanged in 4.1.1, with no visible migration
 prompt.
 
 ## 1. Automated checks in the build
@@ -154,24 +154,7 @@ The pipeline was executed repeatedly during development. Cached stages are reuse
 downloads ~390 MB (vendor archive, Electron runtime, three npm packages, two binaries) and takes
 about five minutes on the reference system.
 
-## 7. macOS packaging
-
-`scripts/build-macos.sh` was executed on the Ubuntu host, which exercises everything except the
-macOS-only steps (`codesign`, `xattr`, `ditto`, `hdiutil`). Those are guarded by `uname -s` and were
-reviewed only; **no macOS hardware was available**, so gatekeeper behaviour, the vendor signature
-verification and the `.dmg` path are unverified.
-
-| Check | Result |
-| --- | --- |
-| `--arch x64` against 4.1.1 | SHA-512 matches the pin, bundle reports 4.1.1 / `com.sugon.sacp`, main binary is Mach-O x86_64 |
-| `--arch arm64` against 4.1.1 | SHA-512 matches the arm64 pin, main binary is Mach-O arm64 |
-| Bundle contents | `Info.plist` still carries the vendor `ElectronAsarIntegrity` value, `app.asar` untouched |
-| Archive | 14 symlink entries preserved (same count as the vendor zip); a round-trip `unzip` restores `Versions/Current -> A` |
-| Version guard | a bundle whose `CFBundleShortVersionString` differs from `VERSION` aborts the build |
-| `--dmg` off macOS | exits before any packaging with `--dmg needs hdiutil` |
-| `--arch all` | builds both architectures in one run |
-
-## 8. Not verified
+## 7. Not verified
 
 - Sign-in, HPC job submission, SSH sessions, file transfer, notebook lifecycle;
 - computer use (CUA): the library loads, but pointer and screenshot actions were not exercised,
