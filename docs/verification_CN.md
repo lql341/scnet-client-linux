@@ -21,6 +21,21 @@ x86-64、X11 会话、单块可容纳 1200×741 的显示器；测试期间无 r
 | 第 5 节，打包 | `Version: 4.1.1-1`，13 个图标尺寸，`desktop-file-validate` 退出码 0，`apt-get -s install` 可解出依赖并给出 4.1.0-4 → 4.1.1-1 升级，解包目录可直接启动 |
 | 连接器目录 | `#/mcp` 页面列出服务下发的连接器（万方数据、Repilot、智慧芽、BioBuddy 等），不依赖 4.1.1 已删除的 `Resources/connectors` |
 
+### revision 2（4.1.1-2）
+
+4.1.1 的第一版留下两处打包缺口与一处权限弱点。第二版实际执行了：
+
+| 检查 | 结果 |
+| --- | --- |
+| 启动器 `umask 077` | 客户端新建文件均为 0600（空 `XDG_CONFIG_HOME` 下的 `Cookies`、`Preferences`、`config.json`） |
+| 收紧既有状态 | 预置为 0664 的 `config.json` 与 `auth.json`，启动后变为 0600 |
+| 托盘依赖 | `dpkg-deb -f` 显示 `Recommends: libu2f-udev, libayatana-appindicator3-1 | libappindicator3-1` |
+| 托盘注册 | 安装了 `libayatana-indicator3` 时，客户端在会话总线上注册 `org.freedesktop.StatusNotifierItem-<pid>-1`（`scnet-client`），「关闭」后可从托盘恢复 |
+| 打开浏览器 | `xdg-utils` 提升为 `Depends`，最小安装下 `shell.openExternal`（连接器授权、外链）也有 `xdg-open` 可用 |
+
+本版未验证：真实的第三方 MCP 服务 OAuth 完整往返（手头没有此类服务）。该路径使用 `127.0.0.1`
+回环重定向，因此不依赖 macOS/Windows 专属的浏览器标签处理，但 Linux 上该标签会留在浏览器里。
+
 4.1.1 仍未重跑：`apt` 真实安装（第二台机器同样无 root）与托盘图标交互。下文 4.1.0-3 的各行保持原记录。
 
 复核中有两个适用于两个版本的观察。通过厂商通道「关闭」主窗口时窗口被隐藏而非退出——窗口模块

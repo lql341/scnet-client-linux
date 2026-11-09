@@ -308,6 +308,15 @@ probes, in order:
 `SCNET_NO_SANDBOX=1` forces step 3. The `.deb` `postinst` additionally sets
 `root:root 4755` on `chrome-sandbox` so an installed package takes path 1.
 
+The launcher also sets `umask 077` before `exec`, and re-`chmod`s an already existing
+`~/.config/scnet-client/config.json` / `~/.sclaw/agent/auth.json` to 0600. This is the only place
+where credentials at rest can be improved without touching the vendor code: the client writes its
+store with the ambient umask (0644 on Debian and Ubuntu by default), and `config.json` holds both the
+session token and — when "记住密码" is used — the remembered-login blob. That blob is
+`local-v1:` + base64(iv‖tag‖AES-256-GCM) with the key derived from `baseUrl` and `userId`, both
+stored in the same record, so it is obfuscation rather than encryption; the vendor would have to
+switch to `safeStorage`/Keychain for a real fix. Documented in the README, unchanged in code.
+
 ## 7. Packaging
 
 ```text

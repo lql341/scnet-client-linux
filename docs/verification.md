@@ -23,6 +23,23 @@ Sections 1–7 record the initial 4.1.0-3 verification on the reference system (
 | Section 5, packaging | `Version: 4.1.1-1`, 13 icon sizes, `desktop-file-validate` exits 0, `apt-get -s install` resolves the dependencies and proposes the 4.1.0-4 → 4.1.1-1 upgrade, and the unpacked tree launches |
 | Connector catalogue | the `#/mcp` page lists the service-side connectors (万方数据, Repilot, 智慧芽, BioBuddy, …) without the bundled `Resources/connectors` tree that 4.1.1 removed |
 
+### Revision 2 (4.1.1-2)
+
+The first 4.1.1 revision exposed two packaging gaps and one permission weakness. What was executed
+for the second revision:
+
+| Check | Result |
+| --- | --- |
+| `umask 077` in the launcher | files created by the client are 0600 (`Cookies`, `Preferences`, `config.json` in an empty `XDG_CONFIG_HOME`) |
+| Existing state is tightened | a `config.json` and `auth.json` pre-seeded as 0664 are 0600 after launch |
+| Tray dependency | `dpkg-deb -f` reports `Recommends: libu2f-udev, libayatana-appindicator3-1 | libappindicator3-1` |
+| Tray registration | with `libayatana-indicator3` installed the app registers `org.freedesktop.StatusNotifierItem-<pid>-1` for `scnet-client` on the session bus, so a "closed" window can be restored |
+| Browser opening | `xdg-utils` moved to `Depends`, so `shell.openExternal` (connector authorisation, external links) has `xdg-open` available on a minimal install |
+
+Not verified for this revision: an actual third-party MCP server OAuth round trip (no server at
+hand). The code path uses a `127.0.0.1` loopback redirect, so the flow does not depend on the
+macOS/Windows-only browser-tab handling, but the browser tab is left open on Linux.
+
 Still not re-executed for 4.1.1: the `apt` install itself (no root on the second machine either) and
 the tray indicator interaction. The 4.1.0-3 rows below remain as recorded.
 

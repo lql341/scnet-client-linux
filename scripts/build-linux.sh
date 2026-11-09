@@ -27,7 +27,7 @@ DIST="$BUILD/linux"
 
 # Versions. Everything except APP_VERSION can be overridden from the environment.
 APP_VERSION="${APP_VERSION:-$(cat "$ROOT/VERSION")}"
-DEB_REVISION="${DEB_REVISION:-1}"   # packaging revision, independent of the upstream version
+DEB_REVISION="${DEB_REVISION:-2}"   # packaging revision, independent of the upstream version
 ELECTRON_VERSION="${ELECTRON_VERSION:-44.7.0}"
 CANVAS_VERSION="${CANVAS_VERSION:-1.0.2}"
 CUA_DRIVER_VERSION="${CUA_DRIVER_VERSION:-0.34.1}"
@@ -237,6 +237,15 @@ cat > "$DIST/launcher.sh" <<'LAUNCHER'
 APP="$(dirname "$(readlink -f "$0")")"
 SB="$APP/chrome-sandbox"
 
+# Keep client state private. config.json holds the session token and the
+# remembered-login blob, and Electron writes it with the ambient umask (0644 on
+# a default Debian/Ubuntu install), which exposes both to other local users.
+umask 077
+for f in "$HOME/.config/scnet-client/config.json" \
+         "$HOME/.sclaw/agent/auth.json"; do
+  [ -f "$f" ] && chmod go-rwx "$f" 2>/dev/null
+done || true
+
 sandbox_usable() {
   # 1) setuid-root chrome-sandbox
   if [ -u "$SB" ] && [ "$(stat -c %u "$SB" 2>/dev/null)" = "0" ]; then
@@ -300,8 +309,8 @@ Priority: optional
 Architecture: amd64
 Installed-Size: 490000
 Maintainer: local rebuild <local@localhost>
-Depends: libgtk-3-0t64 | libgtk-3-0, libnss3, libasound2t64 | libasound2, libx11-xcb1, libxss1, libxtst6, libgbm1, libdrm2, libatspi2.0-0t64 | libatspi2.0-0, libcups2t64 | libcups2, fonts-noto-cjk
-Recommends: xdg-utils, libu2f-udev
+Depends: libgtk-3-0t64 | libgtk-3-0, libnss3, libasound2t64 | libasound2, libx11-xcb1, libxss1, libxtst6, libgbm1, libdrm2, libatspi2.0-0t64 | libatspi2.0-0, libcups2t64 | libcups2, fonts-noto-cjk, xdg-utils
+Recommends: libu2f-udev, libayatana-appindicator3-1 | libappindicator3-1
 Description: SCNet Client (计算服务) - unofficial Linux build
  Unofficial Linux port of the official SCNet desktop client, assembled from
  the upstream macOS Electron build $APP_VERSION with Linux-native replacements

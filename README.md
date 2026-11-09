@@ -87,14 +87,14 @@ build/linux/                                portable bundle
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.1-1_amd64.deb
+scnet-client_4.1.1-2_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.1-1_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.1-2_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
@@ -103,6 +103,28 @@ The launcher keeps the Chromium sandbox whenever the system can provide one — 
 neither is available. `SCNET_NO_SANDBOX=1` forces the fallback.
 
 Configuration is written to `~/.sclaw/`, the same location as the macOS and Windows builds.
+
+## Credentials at rest
+
+The vendor client writes three secrets into the user profile. This build changes their file
+permissions, not the mechanism — the vendor `app.asar` stays untouched:
+
+| File | Content | Protection |
+| --- | --- | --- |
+| `~/.sclaw/agent/scnet-credentials/<hash>.json` | SCNet API key (`sk-…`) | plaintext, created 0600 by the client |
+| `~/.sclaw/agent/mcp-oauth.json` | OAuth tokens for third-party MCP servers | plaintext, `umask`-dependent |
+| `~/.config/scnet-client/config.json` | session token, plus the account password if "记住密码 / Remember password" was used | see below |
+
+The remembered-login value is `local-v1:` + base64(iv‖tag‖AES-256-GCM), and the AES key is
+`sha256(JSON.stringify(["local-v1:", baseUrl, userId]))` — derived from two fields stored in the
+same JSON object. Anyone who can read the file can recover the password offline; it is obfuscation,
+not encryption, and the code is identical on macOS and Windows.
+
+What this build does about it: the launcher sets `umask 077` before starting the client and
+re-`chmod`s an existing `config.json`/`auth.json` to 0600, so a default-`umask` install no longer
+leaves them world-readable. What it cannot do is fix the derivation itself — on a shared machine
+leave "记住密码" off and rely on the API-key path, and revoke keys from the SCNet console when a
+machine is retired.
 
 ## Replaced components
 
@@ -211,10 +233,11 @@ behaviour after unpacking the `.deb`. Procedure, commands and results:
 | Computer use (CUA) | Library loads; pointer/screenshot actions untested; requires X11/Wayland access and `libXtst` |
 | Auto-update | Not functional: the update feed serves macOS/Windows artifacts, and `electron-updater` cannot replace a Linux bundle. Upgrade by rebuilding |
 | Code signing | None |
-| Tray icon | Requires `libayatana-appindicator3` or `libappindicator3` |
+| Tray icon | Declared as `Recommends: libayatana-appindicator3-1 | libappindicator3-1`; the indicator is registered when the library is present, otherwise "close" leaves a windowless process |
 | Closing the main window | Hides to the tray instead of quitting (vendor `close` handler); on a host without an indicator the process keeps running windowless |
 | Tiling window managers, fractional scaling | Not verified; the maximize control relies on how the window manager treats a frameless window |
 | Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
+| MCP OAuth (third-party servers) | The consent flow uses a `127.0.0.1` loopback redirect and completes, but the vendor only closes and raises the browser tab on macOS (AppleScript) and Windows (`oauth-return.ps1`); on Linux the tab stays open. First-party connectors authorise with the SCNet session and need no OAuth |
 | Vendor support | None; not an official distribution |
 
 ## Updating to a new upstream release

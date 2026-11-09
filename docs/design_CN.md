@@ -282,6 +282,13 @@ Linux 上的结果：当前主路由没有厂商控件簇，由后备实现提�
 `SCNET_NO_SANDBOX=1` 强制走第 3 步。`.deb` 的 `postinst` 额外把 `chrome-sandbox` 设为
 `root:root 4755`，因此安装形态走第 1 步。
 
+启动器在 `exec` 之前设置 `umask 077`，并把已存在的 `~/.config/scnet-client/config.json` 与
+`~/.sclaw/agent/auth.json` 重置为 0600。这是在不改厂商代码的前提下唯一能改善「凭据落盘」的环节：
+客户端按环境 `umask` 写存储（Debian/Ubuntu 默认 0644），而 `config.json` 同时含会话 token 与
+勾选「记住密码」时的 `local-v1:` 记录。该记录是 `local-v1:` + base64(iv‖tag‖AES-256-GCM)，密钥由
+`baseUrl` 与 `userId` 派生，而两者就存在同一记录里，因此属于混淆而非加密；真正的修复需要厂商改用
+`safeStorage`/Keychain。README 已就此说明，代码未改动。
+
 ## 7. 打包
 
 ```text

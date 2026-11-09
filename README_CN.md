@@ -82,14 +82,14 @@ build/linux/                                便携目录
     ├── bin/uv                              uv 0.9.9（静态）
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.1-1_amd64.deb
+scnet-client_4.1.1-2_amd64.deb
 ```
 
 ### 运行
 
 ```bash
 build/linux/launcher.sh                          # 便携运行
-sudo apt install ./scnet-client_4.1.1-1_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
+sudo apt install ./scnet-client_4.1.1-2_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
 ```
 
 启动器在系统能够提供 Chromium 沙箱时保留沙箱——setuid-root 的 `chrome-sandbox`，或非特权
@@ -97,6 +97,25 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 都不可用时才退化为 `--no-sandbox`。`SCNET_NO_SANDBOX=1` 可强制退化。
 
 配置写入 `~/.sclaw/`，与 macOS、Windows 版本一致。
+
+## 凭据落盘
+
+厂商客户端会在用户目录里写下三处敏感信息。本项目只改文件权限，不改这套机制——厂商 `app.asar`
+保持原样：
+
+| 文件 | 内容 | 保护方式 |
+| --- | --- | --- |
+| `~/.sclaw/agent/scnet-credentials/<hash>.json` | SCNet API key（`sk-…`） | 明文，客户端创建时即为 0600 |
+| `~/.sclaw/agent/mcp-oauth.json` | 第三方 MCP 服务的 OAuth token | 明文，取决于 `umask` |
+| `~/.config/scnet-client/config.json` | 会话 token；若勾选过「记住密码」，还含账号密码 | 见下文 |
+
+「记住密码」的值是 `local-v1:` + base64(iv‖tag‖AES-256-GCM)，AES 密钥由
+`sha256(JSON.stringify(["local-v1:", baseUrl, userId]))` 派生 —— 而这两个字段就存在同一条 JSON 里。
+也就是说，能读到该文件的人都能离线还原密码；这是混淆而非加密，且 macOS 与 Windows 上完全相同。
+
+本构建做了什么：启动器在启动客户端前设置 `umask 077`，并把已存在的 `config.json`/`auth.json`
+重置为 0600，因此在默认 `umask` 的系统上不再出现其他用户可读的情况。做不到什么：修不了派生方式
+本身——共用机器上请勿勾选「记住密码」，改用 API key 路径，并在机器退役时到 SCNet 控制台吊销密钥。
 
 ## 替换项
 
@@ -195,10 +214,11 @@ scnet-client-linux/
 | 电脑操作（CUA） | 库可加载；点击/截图未验证；需要 X11/Wayland 权限与 `libXtst` |
 | 自动更新 | 不可用：更新源仅提供 macOS/Windows 产物，`electron-updater` 也无法替换 Linux 包体。升级方式为重新构建 |
 | 代码签名 | 无 |
-| 托盘图标 | 需要 `libayatana-appindicator3` 或 `libappindicator3` |
+| 托盘图标 | 已在 `Recommends: libayatana-appindicator3-1 | libappindicator3-1` 中声明；库存在时指示器可正常注册，否则「关闭」会留下无窗口进程 |
 | 关闭主窗口 | 隐藏到托盘而非退出（厂商 `close` 处理）；无托盘指示器的环境下进程继续无窗口运行 |
 | 平铺窗口管理器、分数缩放 | 未验证；最大化按钮依赖窗口管理器对 frameless 窗口的处理 |
 | 同一配置目录多实例 | 受单实例锁与会话恢复影响，偶发无窗口启动；终止残留实例后重试 |
+| MCP OAuth（第三方服务） | 授权走 `127.0.0.1` 回环重定向，流程可完成；但厂商只在 macOS（AppleScript）与 Windows（`oauth-return.ps1`）上关闭并唤起浏览器标签，Linux 上该标签会留在浏览器里。一方连接器用 SCNet 会话授权，无需 OAuth |
 | 厂商支持 | 无；这不是官方发行版 |
 
 ## 升级到新的上游版本
