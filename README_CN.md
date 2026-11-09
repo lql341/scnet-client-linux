@@ -32,8 +32,7 @@ scripts/check-upstream.sh   # 对比本仓库目标版本与线上发行源
 - 支持承诺。这不是官方发行版。
 
 仓库中不含厂商二进制与构建产物。构建时从厂商 CDN 下载归档，并按 `latest-mac.yml` 公布的
-SHA-512 校验。[Releases](https://github.com/lql341/scnet-client-linux/releases)
-附带一个预构建安装包，用于评估；它包含厂商客户端本体，且未签名。
+SHA-512 校验。仓库不发布预构建包：需自行运行流水线，安装生成的未签名 `.deb`（内含厂商客户端本体）。
 
 ## 环境要求
 

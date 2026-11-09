@@ -35,9 +35,8 @@ Out of scope:
 
 The repository tree contains no vendor binaries and no build outputs. The vendor archive is
 fetched from the vendor CDN at build time and verified against the SHA-512 published in
-`latest-mac.yml`. A prebuilt package is attached to
-[Releases](https://github.com/lql341/scnet-client-linux/releases) for evaluation; it contains the
-vendor client and is unsigned.
+`latest-mac.yml`. Nothing prebuilt is published: run the pipeline and install the resulting
+unsigned `.deb`, which contains the vendor client.
 
 ## Requirements
 
