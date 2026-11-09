@@ -334,7 +334,31 @@ and Ubuntu 22.04/24.04.
 non-AppImage layout and the feed carries no Linux artifacts, so the update entry point is
 non-functional by design rather than by patch.
 
-## 8. Invariants
+## 8. macOS target
+
+macOS needs no substitution: `SCNet-<version>-{x64,arm64}.zip` already contains a complete,
+signed application for the matching architecture. `scripts/build-macos.sh` is therefore a
+verification-and-repackaging path, not a port:
+
+| Step | Why |
+| --- | --- |
+| SHA-512 against `latest-mac.yml`, one pin per architecture | the two archives differ, and a re-upload is the one thing that silently breaks a cached build |
+| `CFBundleShortVersionString` = `VERSION`, `CFBundleIdentifier` = `com.sugon.sacp` | catches a mislabelled or partially extracted archive |
+| copy `计算服务.app` unchanged, then zip (`ditto` on macOS, `zip -y` elsewhere) | symlinks inside the frameworks must survive; 14 entries in both archives |
+| `codesign --verify --deep --strict`, ad-hoc re-sign only on failure | the vendor signature is still valid because nothing is modified |
+| `--dmg` via `hdiutil` | the format macOS users expect; unavailable elsewhere, so it fails early rather than at the end |
+
+**Why the asar is not patched on macOS.** Two vendor guarantees would break at once: the code
+signature, and the `ElectronAsarIntegrity` entry that macOS Electron validates at startup. The
+second one is not recomputable from a shell pipeline: for 4.1.1 `Info.plist` records
+`9f4fdcdc77064fda0045beb7dcc0d5aaa4e59d082e300e7ce0a0b1b4b69e8e40` while the shipped
+`app.asar` hashes to `3d0bdba3941585f2212653cb1ca6e1e717a2d1a7df090a69dfc2c59db4ba01bb`, and
+neither the whole file nor the payload after the header reproduces the recorded value. Patching is
+also pointless here: `scripts/patch-vendor.cjs` only injects the Linux window-controls fallback,
+which returns immediately when `host.context.platform !== "linux"`, and macOS draws real traffic
+lights anyway.
+
+## 9. Invariants
 
 - `app.asar` JavaScript is unmodified; the archive is only repacked with a different unpack set.
 - Native module versions equal the versions pinned by the vendor manifest.

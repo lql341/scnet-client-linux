@@ -304,7 +304,27 @@ box 滤波生成（`scripts/extract-icons.py`）。安装 16 至 1024 共 13 个
 `app-update.yml` 原样复制。Linux 上 `electron-updater` 无法更新非 AppImage 布局，且更新源
 本身不含 Linux 产物，因此更新入口在设计上即不可用，而不是被补丁禁用。
 
-## 8. 不变量
+## 8. macOS 目标
+
+macOS 不需要替换：`SCNet-<version>-{x64,arm64}.zip` 本身就是对应架构上完整且已签名的应用。
+因此 `scripts/build-macos.sh` 是「校验 + 重新打包」路径，而不是移植：
+
+| 步骤 | 原因 |
+| --- | --- |
+| 按 `latest-mac.yml` 校验 SHA-512，每个架构一个值 | 两个归档不同；厂商重新上传是唯一会让缓存构建静默失效的情形 |
+| 校验 `CFBundleShortVersionString` = `VERSION`、`CFBundleIdentifier` = `com.sugon.sacp` | 发现错标或解包不完整的归档 |
+| 原样复制 `计算服务.app` 后打包（macOS 用 `ditto`，其他系统用 `zip -y`） | framework 内的符号链接必须保留；两个归档中各有 14 条 |
+| `codesign --verify --deep --strict`，仅在失败时 ad-hoc 重签 | 未做任何修改，厂商签名仍有效 |
+| `--dmg` 走 `hdiutil` | macOS 用户预期的格式；其他系统在开头就失败，而不是打包到最后才报错 |
+
+**为什么 macOS 上不改 `app.asar`。** 那会同时破坏厂商的两项保证：代码签名，以及 macOS 上 Electron
+启动时会校验的 `ElectronAsarIntegrity`。后者无法用 shell 流程重算：4.1.1 的 `Info.plist` 记录的是
+`9f4fdcdc77064fda0045beb7dcc0d5aaa4e59d082e300e7ce0a0b1b4b69e8e40`，而随包 `app.asar` 的 SHA-256 是
+`3d0bdba3941585f2212653cb1ca6e1e717a2d1a7df090a69dfc2c59db4ba01bb`，整文件与「头部之后的负载」
+两种算法都对不上记录值。何况这里的补丁对 macOS 毫无意义：`scripts/patch-vendor.cjs` 只注入 Linux 的
+窗口控件后备实现，它在 `host.context.platform !== "linux"` 时立即返回，而 macOS 本来就有交通灯按钮。
+
+## 9. 不变量
 
 - `app.asar` 中的 JavaScript 除 `patch-vendor.cjs` 声明的三处窗口装饰改动外不做修改，其余字节
   与厂商一致。

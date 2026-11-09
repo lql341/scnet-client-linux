@@ -25,6 +25,7 @@ In scope:
 - replacing the Electron runtime, native node modules and standalone binaries with Linux builds;
 - repacking `app.asar` so the Linux native artifacts resolve correctly;
 - packaging: portable bundle, `.deb`, desktop entry, unprivileged launcher;
+- repackaging the vendor macOS build unchanged for `x64` and `arm64` (`scripts/build-macos.sh`);
 - documenting what was verified, how, and what remains unknown.
 
 Out of scope:
@@ -43,12 +44,14 @@ vendor client and is unsigned.
 
 | Component | Version / notes |
 | --- | --- |
-| Host | Debian 12/13 or Ubuntu 22.04/24.04, x86-64 |
+| Host (Linux target) | Debian 12/13 or Ubuntu 22.04/24.04, x86-64 |
 | Build tools | `bash curl unzip python3 nodejs npm gcc g++ make dpkg-deb fakeroot` |
 | Disk | ~3 GB for `build/work` and `build/cache`, ~750 MB for the bundle |
 | Network | vendor CDN (`dlcdn.scnet.cn`), npm registry, PyPI mirror, Electron mirror |
+| Host (macOS target) | macOS 13+ on arm64 or x64 for signing and `.dmg`; the fetch/verify/copy stages also run elsewhere |
 
-Windows and macOS hosts are not supported as build hosts.
+Windows hosts are not supported. The Linux target cannot be built on macOS, because it compiles
+`node-pty` against the Electron headers and needs `dpkg-deb`/`fakeroot`.
 
 ## Build
 
@@ -58,6 +61,10 @@ cd scnet-client-linux
 scripts/build-linux.sh                 # full pipeline, ~5 min with warm caches
 scripts/build-linux.sh --portable-only # skip the .deb
 scripts/build-linux.sh --clean         # discard build/ first
+
+scripts/build-macos.sh                 # macOS, host architecture
+scripts/build-macos.sh --arch all      # x64 and arm64
+scripts/build-macos.sh --dmg           # also build a .dmg (macOS only)
 ```
 
 The pipeline is idempotent: downloads are cached in `build/cache/`, intermediate trees in
@@ -88,6 +95,10 @@ build/linux/                                portable bundle
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
 scnet-client_4.1.1-1_amd64.deb
+
+build/macos/                                 macOS target (unchanged vendor app)
+├── x64/计算服务.app  arm64/计算服务.app
+└── scnet-client_4.1.1_macos-{x64,arm64}.zip(.sha256)
 ```
 
 ### Run
@@ -103,6 +114,29 @@ The launcher keeps the Chromium sandbox whenever the system can provide one — 
 neither is available. `SCNET_NO_SANDBOX=1` forces the fallback.
 
 Configuration is written to `~/.sclaw/`, the same location as the macOS and Windows builds.
+
+### macOS
+
+macOS needs no port: the vendor distribution is already a native, signed application, so
+`scripts/build-macos.sh` fetches the archive for the requested architecture, verifies it against the
+SHA-512 in `latest-mac.yml`, checks the bundle identifier and version, and repackages it under a
+stable name. **Nothing is patched** — the window-controls fallback is Linux-only (macOS draws traffic
+lights) and rewriting `app.asar` would invalidate both the code signature and the
+`ElectronAsarIntegrity` hash in `Info.plist`, which is not a plain SHA-256 of the archive.
+
+```bash
+scripts/build-macos.sh --arch all      # build/macos/scnet-client_<ver>_macos-{x64,arm64}.zip
+```
+
+Copy `计算服务.app` into `/Applications`. Gatekeeper still applies, so the first launch of a
+downloaded copy needs one command:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/计算服务.app"
+```
+
+On a macOS host the script additionally verifies the vendor signature and re-signs the copy ad-hoc
+(`codesign --sign -`) only if that verification fails; `--dmg` also produces a `.dmg` via `hdiutil`.
 
 ## Replaced components
 
@@ -214,6 +248,7 @@ behaviour after unpacking the `.deb`. Procedure, commands and results:
 | Tray icon | Requires `libayatana-appindicator3` or `libappindicator3` |
 | Closing the main window | Hides to the tray instead of quitting (vendor `close` handler); on a host without an indicator the process keeps running windowless |
 | Tiling window managers, fractional scaling | Not verified; the maximize control relies on how the window manager treats a frameless window |
+| macOS output | Repackaged vendor app, unmodified and unsigned by this project; the script was exercised on Linux for both architectures but not on macOS hardware |
 | Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
 | Vendor support | None; not an official distribution |
 
@@ -222,18 +257,19 @@ behaviour after unpacking the `.deb`. Procedure, commands and results:
 1. `scripts/check-upstream.sh` reports the new version and file list.
 2. Update `VERSION` and `MAC_ZIP_SHA512` (SHA-512 of the x64 zip, base64-decoded from
    `latest-mac.yml`).
-3. If the bundled Electron version changed (`Frameworks/Electron Framework.framework/Versions/A/
+3. Update `MAC_SHA512_ARM64` in `scripts/build-macos.sh` as well — one pin per macOS architecture.
+4. If the bundled Electron version changed (`Frameworks/Electron Framework.framework/Versions/A/
    Resources/Info.plist`), update `ELECTRON_VERSION`; `node-pty` is recompiled automatically.
    Re-check that the patch patterns in `scripts/patch-vendor.cjs` still exist — the build fails if
    they do not, and the new window code has to be re-derived rather than ignored.
-4. Reconcile the native module versions with the new `app.asar/package.json`
+5. Reconcile the native module versions with the new `app.asar/package.json`
    (`CANVAS_VERSION`, `CUA_DRIVER_VERSION`, `UBJS_VERSION`, `NODE_PTY_VERSION`,
    `AGENT_BROWSER_VERSION`, `UV_VERSION`).
-5. Diff the new `Resources/` tree against the previous one. Stage 6 copies `agent-plugins`,
+6. Diff the new `Resources/` tree against the previous one. Stage 6 copies `agent-plugins`,
    `agent-skills`, `cli`, `cua`, `en.lproj`, `tray*.png`, `app-update.yml` and the OAuth artwork;
    entries upstream adds, renames or drops (4.1.1 dropped `connectors/` and `home-scenarios/` and
    added the OAuth PNGs) must be reconciled with that list, or `cp -a` aborts the build.
-6. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
+7. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
    [`docs/verification.md`](docs/verification.md).
 
 New native dependencies (`.node`, `.so`) must be matched with an official `linux-x64-gnu`
