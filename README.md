@@ -6,7 +6,7 @@ Build pipeline that produces a Linux x64 variant of the official SCNet desktop c
 (application name 计算服务, bundle identifier `com.sugon.sacp`) from the vendor's macOS
 Electron distribution.
 
-Current target: **4.1.0** (Electron **44.7.0**), see [`VERSION`](VERSION).
+Current target: **4.1.1** (Electron **44.7.0**), see [`VERSION`](VERSION).
 
 ```bash
 scripts/check-upstream.sh   # compare this repository's target with the live vendor feed
@@ -86,15 +86,15 @@ build/linux/                                portable bundle
     ├── app.asar.unpacked/                  node_modules with Linux native modules
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
-    └── agent-skills/ agent-plugins/ connectors/ home-scenarios/ cli/ cua/
-scnet-client_4.1.0_amd64.deb
+    └── agent-skills/ agent-plugins/ cli/ cua/
+scnet-client_4.1.1-1_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.0_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.1-1_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
@@ -227,7 +227,11 @@ after unpacking the `.deb`. Procedure, commands and results:
 4. Reconcile the native module versions with the new `app.asar/package.json`
    (`CANVAS_VERSION`, `CUA_DRIVER_VERSION`, `UBJS_VERSION`, `NODE_PTY_VERSION`,
    `AGENT_BROWSER_VERSION`, `UV_VERSION`).
-5. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
+5. Diff the new `Resources/` tree against the previous one. Stage 6 copies `agent-plugins`,
+   `agent-skills`, `cli`, `cua`, `en.lproj`, `tray*.png`, `app-update.yml` and the OAuth artwork;
+   entries upstream adds, renames or drops (4.1.1 dropped `connectors/` and `home-scenarios/` and
+   added the OAuth PNGs) must be reconciled with that list, or `cp -a` aborts the build.
+6. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
    [`docs/verification.md`](docs/verification.md).
 
 New native dependencies (`.node`, `.so`) must be matched with an official `linux-x64-gnu`

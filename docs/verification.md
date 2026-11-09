@@ -5,6 +5,22 @@ verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session,
 1200×741-capable display, and no root access during testing (the `.deb` was unpacked with
 `dpkg-deb -x` rather than installed with `apt`).
 
+## 0. Version coverage
+
+Sections 1–7 record the initial 4.1.0-3 verification on the reference system. The 4.1.1 bump was
+re-checked on a second machine, Ubuntu 26.04.1 x86-64 with an X11 (XFCE) session:
+
+| Re-checked | Result |
+| --- | --- |
+| Full pipeline (`scripts/build-linux.sh`) | exits 0, produces `scnet-client_4.1.1-1_amd64.deb` (195 MB) |
+| Section 1 smoke test | identical output; all seven checks pass |
+| Section 2, sign-in window | renders with title 「计算服务」 and class `scnet-client`, 1200×768; the vendor `.window-tools` cluster shows minimize and close, and the fallback stands down (no duplicates) |
+| Section 4, sandbox probe | this host sets `kernel.apparmor_restrict_unprivileged_userns=1` and the portable `chrome-sandbox` is not setuid, so the launcher selects `--no-sandbox` as specified |
+| Section 5, packaging | `Version: 4.1.1-1`, 13 icon sizes, `desktop-file-validate` exits 0, the unpacked tree launches |
+
+Not re-executed for 4.1.1: the maximize/restore and main-route rows of section 2 (no session to log
+in with), section 3 icon resolution, and the `apt` install path. Those rows still describe 4.1.0-3.
+
 ## 1. Automated checks in the build
 
 `scripts/build-linux.sh` fails the build rather than producing a partial bundle:
@@ -73,11 +89,12 @@ is read from `window.is-maximized` and re-queried on resize.
 
 The maximize/restore rows were verified on a stage-6 repacked `app.asar` containing the updated
 script (the same artifact the pipeline produces), not on a rebuilt `.deb`; the packaging section
-below refers to the 4.1.0-3 package.
+below refers to the 4.1.0-3 package, with the 4.1.1-1 re-check in section 0.
 
 Not verified: appearance under a tiling window manager and fractional scaling. The sign-in window
 legitimately shows two controls rather than three: the vendor passes `showMax=false` and the window
-is created with `maximizable: false`.
+is created with `maximizable: false`. Section 0 records the 4.1.1 re-check of the window and
+sign-in-control rows.
 
 ## 3. Icon integration
 
@@ -116,7 +133,7 @@ then force the fallback with `SCNET_NO_SANDBOX=1`.
 | --- | --- |
 | `dpkg-deb -c` layout | `/opt/scnet-client`, `/usr/bin/scnet-client` symlink, desktop entry, 13 icon sizes |
 | Unpack and launch | window appears from the unpacked tree |
-| Version | `4.1.0-3` |
+| Version | `4.1.0-3` (`4.1.1-1` in the re-check) |
 | Dependencies | both `t64` and pre-`t64` names, so Debian 12/13 and Ubuntu 22.04/24.04 resolve |
 
 ## 6. Reproducibility

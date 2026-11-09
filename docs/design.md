@@ -1,8 +1,8 @@
 # Design
 
 Analysis of the vendor package and the reasoning behind each substitution. All observations refer
-to SCNet desktop client **4.1.0** as published for macOS x64
-(`SCNet-4.1.0-x64.zip`). File-level evidence is quoted inline; conclusions that were not verified
+to SCNet desktop client **4.1.1** as published for macOS x64
+(`SCNet-4.1.1-x64.zip`). File-level evidence is quoted inline; conclusions that were not verified
 are marked as such in [`verification.md`](verification.md).
 
 ## 1. Distribution
@@ -14,14 +14,14 @@ The client is distributed through an `electron-updater` generic feed:
 | macOS | `https://dlcdn.scnet.cn/client/mac/latest-mac.yml` |
 | Windows | `https://dlcdn.scnet.cn/client/win/latest.yml` |
 
-`latest-mac.yml` for 4.1.0 lists four artifacts, all with base64-encoded SHA-512:
+`latest-mac.yml` for 4.1.1 lists four artifacts, all with base64-encoded SHA-512:
 
 | File | Size (bytes) |
 | --- | --- |
-| `SCNet-4.1.0-x64.zip` | 257,716,007 |
-| `SCNet-4.1.0-arm64.zip` | 247,991,484 |
-| `SCNet-4.1.0-x64.dmg` | 258,287,735 |
-| `SCNet-4.1.0-arm64.dmg` | 248,631,975 |
+| `SCNet-4.1.1-x64.zip` | 257,627,218 |
+| `SCNet-4.1.1-arm64.zip` | 247,902,758 |
+| `SCNet-4.1.1-x64.dmg` | 258,195,702 |
+| `SCNet-4.1.1-arm64.dmg` | 248,542,343 |
 
 There is no Linux entry, and the download page advertises macOS 13+, Windows 10+ and Android only.
 
@@ -36,7 +36,7 @@ file matches the SHA-512 in the manifest byte for byte.
 
 ```text
 计算服务.app/Contents/
-├── Info.plist                    CFBundleIdentifier com.sugon.sacp, 4.1.0, LSMinimumSystemVersion 13.0
+├── Info.plist                    CFBundleIdentifier com.sugon.sacp, 4.1.1, LSMinimumSystemVersion 13.0
 ├── MacOS/计算服务                Electron launcher stub
 ├── Frameworks/Electron Framework.framework    CFBundleVersion 44.7.0
 └── Resources/
@@ -46,10 +46,9 @@ file matches the SHA-512 in the manifest byte for byte.
     ├── agent-browser/agent-browser   macOS x86-64, version 0.39.0
     ├── agent-skills/             bundled skills
     ├── agent-plugins/            bundled plugins (documents, pdf, spreadsheets, media)
-    ├── connectors/               connector bundles
-    ├── home-scenarios/           home screen scenario catalogue
     ├── cli/index.js              bundled CLI entry
     ├── cua/worker.mjs            computer-use worker
+    ├── scnet-wordmark.png, oauth-app-icons.png, oauth-return.ps1
     ├── tray*.png, icon.icns
     └── app-update.yml            provider: generic, url: .../client/mac
 ```
@@ -58,7 +57,7 @@ file matches the SHA-512 in the manifest byte for byte.
 not obfuscated), `dist/` (React renderer assets), and the runtime dependencies:
 
 ```json
-{ "name": "scnet-client", "version": "4.1.0",
+{ "name": "scnet-client", "version": "4.1.1",
   "main": "dist-electron/main/index.js", "type": "module",
   "packageManager": "bun@1.4.0",
   "engines": { "bun": ">=1.4.0", "node": ">=24.18.1" },
@@ -70,7 +69,7 @@ not obfuscated), `dist/` (React renderer assets), and the runtime dependencies:
   "patchedDependencies": { "@earendil-works/pi-ai@1.1.0": "…",
                           "@earendil-works/pi-coding-agent@1.1.0": "…",
                           "exceljs@4.4.0": "…" },
-  "scnetBuild": { "commit": "8363e92", "channel": "release", "baseVersion": "4.1.0" } }
+  "scnetBuild": { "commit": "c5b623c", "channel": "release", "baseVersion": "4.1.1" } }
 ```
 
 Two consequences matter for this repository:
@@ -80,6 +79,25 @@ Two consequences matter for this repository:
 - The `@earendil-works/pi-*` packages are patched, so a rebuild from npm sources is not equivalent
   to the shipped bundle. This is why the vendor `app.asar` is reused verbatim instead of
   reconstructed.
+
+The dependency block is unchanged since 4.1.0: the pinned native versions (section 4.3), `node-pty`
+and the two standalone binaries (sections 4.4, 4.5) all carry over, so the 4.1.1 bump is a version
+and checksum change only.
+
+### Bundled resource directories
+
+4.1.1 dropped two top-level `Resources/` trees that 4.1.0 shipped and added three files:
+
+| Path | 4.1.0 | 4.1.1 |
+| --- | --- | --- |
+| `connectors/` | bundled connector catalogue (`catalog.json` plus release zips), read from `join(process.resourcesPath, "connectors")` | removed; the packed lookup is gone and the catalogue is `userData/resource-catalog-v3.json`, filled through `connectors.refresh-resources` |
+| `home-scenarios/` | bundled scenario catalogue | removed; the store is `userData/home-scenarios`, file `home-scenarios-replay.json` |
+| `scnet-wordmark.png`, `oauth-app-icons.png` | absent | artwork for the retained OAuth window (`background`/`logo`), read from `process.resourcesPath` |
+| `oauth-return.ps1` | absent | PowerShell helper, only invoked when `process.platform === "win32"` |
+
+The build copies the two PNGs, omits the PowerShell script, and no longer attempts to copy
+`connectors/` or `home-scenarios/`, so the assembled resource set matches what upstream still
+reads at runtime.
 
 ## 3. Why Linux is viable
 

@@ -27,7 +27,7 @@ DIST="$BUILD/linux"
 
 # Versions. Everything except APP_VERSION can be overridden from the environment.
 APP_VERSION="${APP_VERSION:-$(cat "$ROOT/VERSION")}"
-DEB_REVISION="${DEB_REVISION:-4}"   # packaging revision, independent of the upstream version
+DEB_REVISION="${DEB_REVISION:-1}"   # packaging revision, independent of the upstream version
 ELECTRON_VERSION="${ELECTRON_VERSION:-44.7.0}"
 CANVAS_VERSION="${CANVAS_VERSION:-1.0.2}"
 CUA_DRIVER_VERSION="${CUA_DRIVER_VERSION:-0.34.1}"
@@ -39,7 +39,7 @@ UV_VERSION="${UV_VERSION:-0.9.9}"
 MAC_BASE_URL="${MAC_BASE_URL:-https://dlcdn.scnet.cn/client/mac}"
 MAC_ZIP_URL="$MAC_BASE_URL/SCNet-$APP_VERSION-x64.zip"
 # SHA-512 of SCNet-<version>-x64.zip, as published in latest-mac.yml (base64 decoded).
-MAC_ZIP_SHA512="${MAC_ZIP_SHA512:-158429d9124ce6ec566482e162d7091def40a1022d89155281d24d4f0b6b3b87bed198ca95ae04c931b13ccd6b1900a8be54c495a8b891f692a9ad9776cf4629}"
+MAC_ZIP_SHA512="${MAC_ZIP_SHA512:-a81c7fd1b28c3e2f52105c48dbb290a821705f55deed347bc66c1a8dfab0eb574e0f8f05d16ded94e31d7be9d34adee3f3eb9106ec386afb25129a0e8f79dcd2}"
 ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron}"
 UV_INDEX="${UV_INDEX:-https://pypi.tuna.tsinghua.edu.cn/simple/uv/}"
 
@@ -198,10 +198,14 @@ rm -f "$DIST/resources/default_app.asar"
 npx --yes @electron/asar pack "$WORK/app" "$DIST/resources/app.asar" --unpack-dir node_modules
 note "app.asar $(stat -c %s "$DIST/resources/app.asar") bytes"
 
-for dir in agent-plugins agent-skills connectors home-scenarios cli cua en.lproj; do
+# 4.1.1 dropped the bundled connector catalogue and home-scenario store (both are
+# fetched into userData now), so only these resource directories remain.
+for dir in agent-plugins agent-skills cli cua en.lproj; do
   cp -a "$APP_RES/$dir" "$DIST/resources/"
 done
 cp -a "$APP_RES"/tray*.png "$APP_RES/app-update.yml" "$DIST/resources/"
+# Artwork for the OAuth capture window; oauth-return.ps1 is Windows-only and omitted.
+cp -a "$APP_RES/scnet-wordmark.png" "$APP_RES/oauth-app-icons.png" "$DIST/resources/"
 mkdir -p "$DIST/resources/bin" "$DIST/resources/agent-browser"
 cp -f "$CACHE/uv" "$DIST/resources/bin/uv"
 cp -f "$CACHE/agent-browser" "$DIST/resources/agent-browser/agent-browser"
