@@ -247,8 +247,20 @@
     return list;
   }
 
+  /**
+   * The vendor renderer localises itself from the account language and rewrites
+   * its own setting at startup, so translating its labels would fight it when it
+   * already renders English. The table therefore applies only while the vendor
+   * interface is Chinese.
+   */
+  function vendorSpeaksChinese() {
+    var lang = (document.documentElement.lang || '').toLowerCase();
+    if (!lang) return true;
+    return lang.indexOf('zh') === 0;
+  }
+
   function translateDom() {
-    var english = settings.lang === 'en';
+    var english = settings.lang === 'en' && vendorSpeaksChinese();
     containers().forEach(function (root) {
       var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
       var node;

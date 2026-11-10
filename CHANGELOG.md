@@ -5,6 +5,22 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-6
+
+### Fixed
+
+- The label substitution ran even when the vendor renderer already displayed English, which the
+  renderer derives from the account language and rewrites at startup. The result was a mixed
+  interface. The table now applies only while the vendor interface is Chinese, which is also what the
+  documentation claims.
+
+### Recorded
+
+- The vendor has a language mechanism after all: `localStorage["sacp:client-settings:language"]`
+  selects its zh/en bundles, but the value is restored from `userInfo.language` on every start, so a
+  local switch does not survive. That is why the setting this build offers covers only the strings it
+  contributes.
+
 ## 4.1.2-5
 
 ### Added
