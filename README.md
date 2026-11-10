@@ -280,8 +280,8 @@ otherwise the dependent feature fails at runtime.
   and ABI decisions, packaging layout
 - [`docs/verification.md`](docs/verification.md) — verification procedure, observed results,
   remaining unknowns
-- [`docs/extension-design.md`](docs/extension-design.md) — planned additions, theming, verification
-  plan and boundaries
+- [`docs/extension-design.md`](docs/extension-design.md) — additions beyond the port: per-centre
+  usage, billing, notifications, diagnostics, theming; mechanism, verification and boundaries
 
 ## Status
 

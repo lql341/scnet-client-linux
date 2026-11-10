@@ -5,6 +5,16 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## Unreleased
+
+### Added
+
+- Extension bundle injected by `scripts/patch-vendor.cjs` (`extensions/`): per-centre usage with a
+  fallback to the account payload, a billing panel with CSV export, job state notifications, a
+  diagnostics report, and three themes (`system`, `paper`, `claude`).
+- The panel is documented in [`docs/extension-design.md`](docs/extension-design.md), including the
+  `usage.centers` payload the platform side still has to provide.
+
 ## 4.1.1-2
 
 ### Security

@@ -49,7 +49,7 @@ window.host.context                      // { platform, arch, version, isMainWin
 | 作业列表与状态 | `scnet.read` | `jobs.list`、`jobs.get` | 面板打开时每 30 秒 |
 | 作业指标 | `scnet.read` | `jobs.metrics` | 按需 |
 | 传输与文件任务 | `scnet.read` | `transfers.list`、`file-tasks.list` | 可见时每 15 秒 |
-| 用量与价格 | `scnet.read` | `storage.usage`、`queues.list`、`resources.list`、`prices.quote` | 按需 |
+| 分中心用量 | `scnet.read` | `usage.centers`（待平台提供），回退到 `account.get` | 60 秒 |
 | 控制台页面 | `auth.open-authenticated-route` | `{ route }` | 事件触发 |
 | 诊断信息 | `diagnostics.list-files`、`diagnostics.read-file`、`app.get-version`、`environment.get-context` | 按宿主定义 | 按需 |
 | 任务通知 | `notifications.set-task-state` | `{ tasks: [...] }` | 状态变化时 |
@@ -59,10 +59,23 @@ window.host.context                      // { platform, arch, version, isMainWin
 
 ## 4. 功能
 
-### 4.1 账户与额度卡片
+### 4.1 分中心用量
 
-位于侧栏底部的紧凑区块：钱包余额、各集群账户及其余额、平台返回到期时间时显示该日期。金额按平台
-币种格式化，缺失字段直接省略，不以零值占位。请求失败时区块折叠为一行提示，并提供重试入口。
+面板按中心回答三个问题：账户属于哪些中心、每个中心包含哪些集群、在该中心的消耗情况。
+
+数据来自两种载荷。`account.get` 现已可用，返回钱包余额、赠送余额与按集群账户列出的条目，其中
+`centerNames` 与 `clusterIds` 为平行数组；模块将其展开为「一个中心一行」，账户余额只在账户层面
+呈现一次。`usage.centers` 是平台侧正在补充的消耗数据接口，面板已按其形状实现：
+
+```json
+{ "currency": "CNY",
+  "centres": [
+    { "centerName": "华东一区【昆山】", "clusterIds": ["11250"],
+      "cpuCoreHours": 1234.5, "gpuCardHours": 87.25, "storageGiB": 512, "jobCount": 42 } ] }
+```
+
+平台未返回的字段显示为破折号；该载荷上线后表格自动增加消耗列，客户端无需改动。在此之前面板明确
+标注分中心接口尚未开放，使限制可见而非隐含。
 
 ### 4.2 账单面板
 
@@ -119,6 +132,10 @@ window.host.context                      // { platform, arch, version, isMainWin
 `localStorage`（`scnet.ext.theme`），由 `<head>` 中的内联脚本在首帧前应用，避免闪烁。
 `prefers-color-scheme` 仅驱动 `system`；两个显式主题为固定浅色主题。
 
+渲染层在运行时将 `--color-accent`、`--color-accent-hover` 与字体栈以内联样式写入 `<html>` 与
+`<body>`。普通权重的样式表规则无法覆盖内联声明，因此强调色在两个元素上以 `!important` 声明；
+其余变量交由层叠处理，厂商仍可自由调整自身取值。
+
 正文对比度维持 4.5:1 以上，强调色对画布维持 3:1 以上；焦点环取自强调色变量，在各主题下均可见。
 
 ## 6. 配置与打包
@@ -129,19 +146,19 @@ window.host.context                      // { platform, arch, version, isMainWin
 
 ## 7. 验证方案
 
-| 范围 | 方法 |
-| --- | --- |
-| 模块注册表 | 将某个宿主操作置为缺失后加载，模块应跳过，外壳正常渲染 |
-| 账户卡片 | 通过 DevTools 协议观察一次 `scnet.read` 调用，校验数值渲染；调用被拒时校验失败态 |
-| 账单面板与导出 | 列表渲染，导出生成包含已加载行的 CSV |
-| 作业通知 | 经 `notifications.set-task-state` 注入一次状态变化，仅产生一条通知，不随轮询重复 |
-| 诊断 | 报告包含版本、平台与日志尾部，不含凭据材料 |
-| 连通性 | 三个探测并行执行，各自独立超时 |
-| 主题 | 每个主题在 1200×768 下截图三张，并对变量做对比度计算 |
-| 回归 | 七项原生冒烟检查与窗口控件行为保持不变 |
+在 Ubuntu 26.04.1 x64/X11 上针对 4.1.1 包执行，使用 DevTools 协议并采用既有配置的副本。
 
-本环境无法验证的项：真实作业状态迁移、实时账单数据、带通知守护进程的桌面通知投递，以及平台侧
-确认前的 OpenAPI 控制台路由。
+| 范围 | 方法与结果 |
+| --- | --- |
+| 扩展加载 | `window.__scnetExt` 存在，启动按钮已挂载，样式表生效 |
+| 分中心用量 | 1 个账户展开为 12 行（华东一区【昆山】、西北二区【甘肃】等），并显示钱包与赠送余额；`usage.centers` 被宿主 schema 拒绝，回退路径生效并在面板中注明 |
+| 账单 | 加载 20 行，总数 612，无错误；分页与 CSV 导出绑定到已加载行 |
+| 诊断 | 生成 12,270 字符的报告，含平台、版本、主题与日志尾部 |
+| 主题 | `claude` 解析为画布 `#faf9f5`、强调 `#d97757`、边框 `#e5e2d9`、圆角 12 px；侧栏背景实测 `rgb(240, 238, 230)` |
+| 失败路径 | 平台拒绝凭据状态时，面板显示 `SCNet account information is unavailable`，外壳不受影响 |
+
+未验证：状态迁移时的通知投递（测试期间未出现作业状态变化）、已加载行之外的 CSV 内容，以及不属于
+本范围的 OpenAPI 控制台路由。
 
 ## 8. 边界
 
@@ -152,3 +169,9 @@ window.host.context                      // { platform, arch, version, isMainWin
 - 内嵌控制台页面：需要共享会话的新窗口；
 - 作业提交与取消界面：需要厂商审批流程；
 - 原生标题栏主题：Linux 上无主进程挂钩。
+
+## 9. 实现状态
+
+本仓库已实现：注入补丁、模块注册表、含回退的分中心用量、账单面板与 CSV 导出、作业通知轮询、
+诊断报告，以及三套主题。平台侧待提供：4.1 节所述的 `usage.centers` 载荷。移除该补丁即整体停用；
+某个宿主操作消失时，相关模块单独停止。

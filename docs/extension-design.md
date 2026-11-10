@@ -54,7 +54,7 @@ extension formats and displays, never caches to disk.
 | Job list and state | `scnet.read` | `jobs.list`, `jobs.get` | 30 s while the panel is open |
 | Job metrics | `scnet.read` | `jobs.metrics` | on demand |
 | Transfers and file tasks | `scnet.read` | `transfers.list`, `file-tasks.list` | 15 s while visible |
-| Quota and pricing | `scnet.read` | `storage.usage`, `queues.list`, `resources.list`, `prices.quote` | on demand |
+| Centre usage | `scnet.read` | `usage.centers` (to be provided), falling back to `account.get` | 60 s |
 | Console pages | `auth.open-authenticated-route` | `{ route }` | event |
 | Diagnostics | `diagnostics.list-files`, `diagnostics.read-file`, `app.get-version`, `environment.get-context` | as defined by the host | on demand |
 | Task notifications | `notifications.set-task-state` | `{ tasks: [...] }` | on state change |
@@ -65,12 +65,26 @@ cannot drive without duplicating vendor logic.
 
 ## 4. Features
 
-### 4.1 Account and quota card
+### 4.1 Centre usage
 
-A compact block in the sidebar footer: wallet balance, the cluster accounts with their balances, and
-the expiry date when the platform reports one. Values are formatted with the platform currency; a
-missing field is omitted rather than shown as zero. Failure collapses the block to a single line with
-a retry action.
+The panel answers one question per centre: which centres the account belongs to, which clusters sit
+in each, and how much has been consumed there.
+
+Two payloads feed it. `account.get` exists today and returns a wallet, a special balance and one entry
+per cluster account whose `centerNames` and `clusterIds` are parallel arrays; the module expands those
+into one row per centre and reports the account balance once, at account level. `usage.centers` is the
+payload the platform team is adding for consumption figures, in the shape the panel already accepts:
+
+```json
+{ "currency": "CNY",
+  "centres": [
+    { "centerName": "华东一区【昆山】", "clusterIds": ["11250"],
+      "cpuCoreHours": 1234.5, "gpuCardHours": 87.25, "storageGiB": 512, "jobCount": 42 } ] }
+```
+
+Fields the platform does not return are rendered as an em dash; the table gains its consumption
+columns as soon as the payload arrives, with no client change. Until then the panel states that the
+per-centre API is not yet available, so the limitation is visible rather than implied.
 
 ### 4.2 Billing panel
 
@@ -136,6 +150,11 @@ vendor appearance instead of breaking the layout. The choice is stored in `local
 (`scnet.ext.theme`) and applied by an inline script in `<head>` so the first paint is already
 themed. `prefers-color-scheme` drives `system`; the two explicit themes are fixed light themes.
 
+The renderer writes `--color-accent` and `--color-accent-hover`, along with the font stacks, as
+inline styles on `<html>` and `<body>` at runtime. A stylesheet rule of normal weight cannot replace
+them, so the accent is declared with `!important` on both elements; every other token is left to the
+cascade, which keeps the vendor free to change its own values.
+
 Contrast is held at 4.5:1 or better for body text and at 3:1 for the accent against the canvas.
 Focus rings are drawn from the accent token so they remain visible in every theme.
 
@@ -147,20 +166,21 @@ runtime dependencies. `SCNET_EXT_DISABLE=1` disables it for triage, and `localSt
 
 ## 7. Verification plan
 
-| Area | Method |
-| --- | --- |
-| Module registry | load with a host operation stubbed out; the module must skip and the shell must render |
-| Account card | one `scnet.read` call observed through the DevTools protocol, values rendered, failure state rendered when the call is rejected |
-| Billing panel and export | list renders, export produces a CSV with the loaded rows |
-| Job notifications | a state transition injected through `notifications.set-task-state` raises one notification, not one per poll |
-| Diagnostics | report contains version, platform and the log tail; no credential material |
-| Connectivity | three probes run in parallel, each with an independent timeout |
-| Themes | three screenshots per theme at 1200×768; contrast measured on the tokens |
-| Regression | the seven native smoke checks and the window-controls behaviour remain unchanged |
+Executed on Ubuntu 26.04.1 x64/X11 against the 4.1.1 bundle, using the DevTools protocol with a copy
+of an existing profile.
 
-Items that cannot be verified in this environment: real job transitions, live billing data,
-notification delivery in a desktop session with a notification daemon, and OpenAPI console routes
-until the platform team confirms them.
+| Area | Method and result |
+| --- | --- |
+| Extension loads | `window.__scnetExt` present, launcher button mounted, stylesheet applied |
+| Centre usage | 1 account expanded into 12 rows (华东一区【昆山】, 西北二区【甘肃】, …) with wallet and special balance; `usage.centers` rejected by the host schema, fallback recorded and reported in the panel |
+| Billing | 20 rows loaded, total 612, no error; paging and CSV export wired to the loaded rows |
+| Diagnostics | report of 12,270 characters containing platform, version, theme and the log tail |
+| Themes | `claude` resolves canvas `#faf9f5`, accent `#d97757`, border `#e5e2d9`, radius 12 px; sidebar background measured as `rgb(240, 238, 230)` |
+| Failure path | with a credential state the platform rejects, the panel shows `SCNet account information is unavailable` and the shell keeps working |
+
+Not verified: notification delivery on state transitions (no job transitions occurred during the
+test), CSV file contents beyond the loaded rows, and the OpenAPI console route, which is not part of
+this scope.
 
 ## 8. Boundaries
 
@@ -171,3 +191,10 @@ Out of scope for the first version, with the reason:
 - embedded console pages: require a window with a shared session;
 - job submission and cancellation UI: require the vendor approval flow;
 - theme for the native title bar: no main-process hook on Linux.
+
+## 9. Implementation status
+
+Implemented in this repository: the injector patch, the module registry, centre usage with its
+fallback, the billing panel with CSV export, job notification polling, the diagnostics report, and
+three themes. Outstanding from the platform side: the `usage.centers` payload of section 4.1. The
+extension ships disabled by removing the patch, and stops per module when a host operation disappears.

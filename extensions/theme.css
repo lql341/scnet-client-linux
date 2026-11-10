@@ -1,0 +1,264 @@
+/*
+ * Theme tokens and panel styles for the SCNet client extensions.
+ *
+ * Themes override the vendor's own custom properties, which the renderer already
+ * uses for surfaces, text, borders, accent and radii. When the vendor renames a
+ * token, the theme stops applying to that surface and the vendor value stands,
+ * so a redesign degrades the theme rather than breaking the layout.
+ *
+ * The attribute is set on <html> by the injector's head bootstrap (first paint)
+ * and by extensions/main.js when the user switches themes.
+ */
+
+:root[data-scnet-theme='paper'] {
+  --color-surface-under: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f2ed;
+  --color-surface-elevated: #ffffff;
+  --text: #1c1b1a;
+  --text-secondary: #45423d;
+  --text-tertiary: #6b6862;
+  --text-link: #2f6feb;
+  --text-link-hover: #1f57c3;
+  --color-accent: #2f6feb;
+  --color-accent-hover: #1f57c3;
+  --border-main: #e4e1da;
+  --border-subtle: #ece9e2;
+  --border-light: #f1eee8;
+  --border-heavy: #d5d1c7;
+  --border-focus: #2f6feb;
+  --button-neutral-bg: #f1eee8;
+  --button-neutral-bg-hover: #e8e4dc;
+  --button-neutral-text: #1c1b1a;
+}
+
+:root[data-scnet-theme='claude'] {
+  --color-surface-under: #faf9f5;
+  --color-surface: #f0eee6;
+  --color-surface-muted: #f5f4ee;
+  --color-surface-elevated: #ffffff;
+  --text: #141413;
+  --text-secondary: #3d3b36;
+  --text-tertiary: #6c6a64;
+  --text-link: #b85c3f;
+  --text-link-hover: #9d4a30;
+  --color-accent: #d97757;
+  --color-accent-hover: #c4653f;
+  --color-brand-scnet: #d97757;
+  --border-main: #e5e2d9;
+  --border-subtle: #eeece4;
+  --border-light: #f3f1ea;
+  --border-heavy: #d8d4c8;
+  --border-focus: #d97757;
+  --button-neutral-bg: #f0eee6;
+  --button-neutral-bg-hover: #e8e5da;
+  --button-neutral-text: #141413;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+}
+
+/*
+ * The renderer writes the accent and font tokens as inline styles on <html> and
+ * <body> at runtime (theme plumbing in the vendor code), so a stylesheet rule of
+ * normal weight cannot replace them. Declaring the accent with !important on both
+ * elements is the only way for a theme to take effect; the remaining tokens are
+ * left to the cascade so the vendor can keep updating them.
+ */
+:root[data-scnet-theme='paper'],
+:root[data-scnet-theme='paper'] body {
+  --color-accent: #2f6feb !important;
+  --color-accent-hover: #1f57c3 !important;
+}
+
+:root[data-scnet-theme='claude'],
+:root[data-scnet-theme='claude'] body {
+  --color-accent: #d97757 !important;
+  --color-accent-hover: #c4653f !important;
+  --color-brand-scnet: #d97757 !important;
+}
+
+/* ---------------------------------------------------------------- our panel */
+
+.sx-root {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2147483000;
+  font: 13px/1.5 -apple-system, 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
+  color: var(--text, #1a1c1f);
+  -webkit-app-region: no-drag;
+}
+
+.sx-launcher {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border-main, #1a1c1f14);
+  background: var(--color-surface-elevated, #fff);
+  color: var(--text-secondary, #5a5f66);
+  font-size: 15px;
+  cursor: default;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.sx-launcher:hover {
+  background: var(--button-neutral-bg, #f3f3f3);
+}
+
+.sx-panel {
+  position: absolute;
+  right: 0;
+  bottom: 42px;
+  width: 520px;
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--color-surface-elevated, #fff);
+  border: 1px solid var(--border-main, #1a1c1f14);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+:root[data-scnet-theme='claude'] .sx-panel {
+  background: #fffdf9;
+  border-color: #e5e2d9;
+}
+
+.sx-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 8px 0;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+}
+
+.sx-tab {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary, #6b6f76);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 8px) var(--radius-sm, 8px) 0 0;
+  cursor: default;
+  font: inherit;
+}
+
+.sx-tab.sx-active {
+  color: var(--text, #1a1c1f);
+  background: var(--color-surface-muted, #f3f3f3);
+}
+
+.sx-body {
+  padding: 12px;
+}
+
+.sx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sx-table th,
+.sx-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sx-table th {
+  color: var(--text-tertiary, #6b6f76);
+  font-weight: 500;
+}
+
+.sx-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 2px 10px;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+  margin-bottom: 8px;
+}
+
+.sx-summary strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sx-account {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 2px 6px;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+  margin-top: 6px;
+}
+
+.sx-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-surface-muted, #f3f3f3);
+  color: var(--text-tertiary, #6b6f76);
+}
+
+.sx-muted {
+  color: var(--text-tertiary, #6b6f76);
+  margin: 8px 0;
+}
+
+.sx-error {
+  color: #c0392b;
+  margin: 8px 0;
+}
+
+.sx-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.sx-action {
+  border: 1px solid var(--border-main, #ddd);
+  background: var(--button-neutral-bg, #f6f6f6);
+  color: var(--text, #1a1c1f);
+  border-radius: var(--radius-sm, 8px);
+  padding: 5px 10px;
+  font: inherit;
+  cursor: default;
+}
+
+.sx-action:hover {
+  background: var(--button-neutral-bg-hover, #ededed);
+}
+
+.sx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+}
+
+.sx-select {
+  font: inherit;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--border-main, #ddd);
+  background: var(--color-surface-elevated, #fff);
+  color: var(--text, #1a1c1f);
+}
+
+.sx-check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent, #339cff);
+}
+
+.sx-foot {
+  margin-top: 12px;
+  font-size: 11px;
+}
