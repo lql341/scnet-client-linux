@@ -5,6 +5,13 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-4
+
+### Fixed
+
+- The settings dialog kept fixed font sizes, so it did not follow the text-size setting while the
+  rest of the interface did. Its font sizes now scale with the same multiplier.
+
 ## 4.1.2-3
 
 ### Changed

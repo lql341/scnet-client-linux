@@ -189,7 +189,9 @@
   justify-content: center;
   background: var(--bg-overlay, #0000006b);
   -webkit-app-region: no-drag;
-  font: 13px/1.5 -apple-system, 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
+  font-family: -apple-system, 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
+  font-size: calc(13px * var(--sx-scale, 1));
+  line-height: 1.5;
   color: var(--text, #1a1c1f);
 }
 
@@ -211,7 +213,7 @@
 }
 
 .sx-dialog-head strong {
-  font-size: 14px;
+  font-size: calc(14px * var(--sx-scale, 1));
   font-weight: 600;
 }
 
@@ -219,7 +221,7 @@
   border: 0;
   background: transparent;
   color: var(--text-tertiary, #6b6f76);
-  font-size: 16px;
+  font-size: calc(16px * var(--sx-scale, 1));
   line-height: 1;
   padding: 4px 6px;
   cursor: default;
@@ -301,6 +303,6 @@
 .sx-note {
   margin: 12px 0 0;
   color: var(--text-tertiary, #6b6f76);
-  font-size: 12px;
+  font-size: calc(12px * var(--sx-scale, 1));
   line-height: 1.5;
 }
