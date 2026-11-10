@@ -42,10 +42,23 @@ own persistence, and a multiplier keeps the layout proportions intact.
 
 ## Language
 
-`中文` and `English` switch the strings this extension contributes: the menu entry, the dialog title,
-the group labels, the palette and size names, and the footnote. The vendor interface is Chinese only
-— the shipped renderer has no language switch, and `en.lproj` covers macOS menu labels rather than
-application text — so the dialog states that its scope is limited to these strings.
+`中文` and `English` switch the strings this build contributes, plus a curated set of labels in the two
+places where the application is most exposed:
+
+| Container | Labels |
+| --- | --- |
+| Sidebar | 新建任务 · 消息频道 · 插件 · 自动化 · 高性能计算, section headers 项目 · 最近, badge 实名认证 |
+| Account menu | 我的资源 · 费用中心 · 设置 · 帮助 · 退出登录 |
+| This dialog | entry label, title, group labels, palette and size names, footnote |
+
+The substitution walks the text nodes of `aside.sidebar-shell` and `.account-menu`, replaces exact
+matches only, and remembers the original text per node so that switching back restores it. A
+`MutationObserver` re-applies it after the vendor re-renders the menu.
+
+**Scope.** The vendor renderer has no language switch — `en.lproj` covers macOS menu labels, not
+application text — so anything outside those containers stays Chinese: message content, prompts,
+settings pages, error messages. The dialog states that its scope is limited, and the mapping lives in
+one object in `extensions/main.js` so that a vendor rewording is a one-line change.
 
 ## Verification
 
@@ -58,7 +71,7 @@ with real mouse events.
 | Dialog | opens from the entry, closes on the backdrop or Escape, three groups rendered |
 | Palette | `forest` applies `#2f7d54` as the accent and repaints the sidebar; `ink` switches the surface tokens to a dark set |
 | Text size | `大` yields `calc(14px * 1.08)` for `--font-size-base`; `小` yields `0.92` |
-| Language | `English` renames the entry, the title, the groups, the chips and the footnote |
+| Language | `English` renames the dialog, and the sidebar and account menu labels through the substitution table; switching back restores the originals exactly |
 | Persistence | the choice is restored after a restart and applied before first paint |
 
 Not verified: how the palettes interact with every vendor surface (charts, code blocks, embedded

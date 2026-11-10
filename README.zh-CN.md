@@ -83,14 +83,14 @@ build/linux/                                便携目录
     ├── bin/uv                              uv 0.9.9（静态）
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.2-4_amd64.deb
+scnet-client_4.1.2-5_amd64.deb
 ```
 
 ### 运行
 
 ```bash
 build/linux/launcher.sh                          # 便携运行
-sudo apt install ./scnet-client_4.1.2-4_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
+sudo apt install ./scnet-client_4.1.2-5_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
 ```
 
 启动器在系统能够提供 Chromium 沙箱时保留沙箱——setuid-root 的 `chrome-sandbox`，或非特权
@@ -122,7 +122,7 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 
 一个对话框，注入渲染层而不修改厂商代码，从头像展开的账户菜单进入：六种配色（`system`、`paper`、
 `sand`、`forest`、`indigo`、`ink`，各带深色变体）、三档字号（小、标准、大），以及对话框自身的语言
-切换（中文 / English；客户端正文仅有中文）。详见
+切换（中文 / English，覆盖对话框、侧栏导航与账户菜单；其余厂商界面没有语言开关，保持中文）。详见
 [`docs/extension-design.zh-CN.md`](docs/extension-design.zh-CN.md)。
 
 ## 替换项

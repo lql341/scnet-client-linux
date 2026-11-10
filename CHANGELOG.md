@@ -5,6 +5,15 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-5
+
+### Added
+
+- The English language setting now also covers the sidebar (navigation items, section headers, the
+  verification badge) and the account menu, through a substitution table of thirteen labels applied to
+  the text nodes of those two containers. The originals are remembered per node, so switching back
+  restores them; a `MutationObserver` re-applies the table after the vendor re-renders the menu.
+
 ## 4.1.2-4
 
 ### Fixed

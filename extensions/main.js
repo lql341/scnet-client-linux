@@ -80,7 +80,7 @@
 
   function setPalette(name) { settings.palette = name; store(KEYS.palette, name); apply(); refresh(); }
   function setSize(name) { settings.size = name; store(KEYS.size, name); apply(); refresh(); }
-  function setLang(name) { settings.lang = name; store(KEYS.lang, name); refresh(); }
+  function setLang(name) { settings.lang = name; store(KEYS.lang, name); refresh(); translateDom(); }
 
   // -------------------------------------------------------------------- dialog
 
@@ -207,6 +207,67 @@
   function refresh() {
     if (dialog.root && !dialog.root.hasAttribute('hidden')) dialog.render();
     syncMenuLabel();
+    translateDom();
+  }
+
+  // ------------------------------------------------------------ dom translation
+
+  /*
+   * The vendor renderer has no language switch, so English is applied to a
+   * curated set of labels in the two places it is most visible: the sidebar and
+   * the account menu. Only exact text matches are replaced, only inside those
+   * two containers, and the original text is remembered per text node so that
+   * switching back restores it. Anything upstream changes or adds stays as
+   * shipped.
+   */
+  var LABELS = {
+    '新建任务': 'New task',
+    '消息频道': 'Channels',
+    '插件': 'Plugins',
+    '自动化': 'Automations',
+    '高性能计算': 'HPC',
+    '项目': 'Projects',
+    '最近': 'Recent',
+    '实名认证': 'Verified',
+    '我的资源': 'My resources',
+    '费用中心': 'Billing',
+    '设置': 'Settings',
+    '帮助': 'Help',
+    '退出登录': 'Sign out',
+  };
+
+  var originals = new WeakMap();
+
+  function containers() {
+    var list = [];
+    var sidebar = document.querySelector('aside.sidebar-shell');
+    if (sidebar) list.push(sidebar);
+    var menu = document.querySelector('.account-menu');
+    if (menu) list.push(menu);
+    return list;
+  }
+
+  function translateDom() {
+    var english = settings.lang === 'en';
+    containers().forEach(function (root) {
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      var node;
+      while ((node = walker.nextNode())) {
+        var text = node.nodeValue;
+        var key = text.trim();
+        if (!key) continue;
+        if (english) {
+          var translation = LABELS[key];
+          if (!translation) continue;
+          if (!originals.has(node)) originals.set(node, text);
+          if (text !== translation) node.nodeValue = translation;
+        } else if (originals.has(node)) {
+          var original = originals.get(node);
+          if (text !== original) node.nodeValue = original;
+          originals.delete(node);
+        }
+      }
+    });
   }
 
   // ---------------------------------------------------------------- menu entry
@@ -295,15 +356,24 @@
   function start() {
     apply();
     injectMenu();
+    translateDom();
     var queued = false;
     new MutationObserver(function () {
       if (queued) return;
       queued = true;
-      requestAnimationFrame(function () { queued = false; injectMenu(); });
+      requestAnimationFrame(function () { queued = false; injectMenu(); translateDom(); });
     }).observe(document.body, { childList: true, subtree: true });
   }
 
-  window.__scnetExt = { settings: settings, dialog: dialog, apply: apply, setPalette: setPalette, setSize: setSize, setLang: setLang };
+  window.__scnetExt = {
+    settings: settings,
+    dialog: dialog,
+    apply: apply,
+    setPalette: setPalette,
+    setSize: setSize,
+    setLang: setLang,
+    translateDom: translateDom,
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, { once: true });
