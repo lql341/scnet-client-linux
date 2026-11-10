@@ -139,10 +139,11 @@
     loadedAt: 0,
     state: { loading: false, error: null, accounts: [], wallet: null, special: null, currency: '', derived: false, hasConsumption: false },
 
-    refresh: function (force) {
+    refresh: function (force, attempt) {
       var now = Date.now();
       if (!force && this.cache && now - this.loadedAt < 60000) return Promise.resolve(this.cache);
       var self = this;
+      var tries = attempt || 0;
       self.state.loading = true;
       if (board.renderUsage) board.renderUsage();
 
@@ -154,8 +155,17 @@
         }
         return scnet('account.get').then(function (fallback) {
           if (!fallback.ok) {
+            // The agent runtime is still booting for the first seconds after launch;
+            // one retry avoids reporting a transient failure as a persistent one.
+            if (tries < 1) {
+              return new Promise(function (resolve) { setTimeout(resolve, 2500); })
+                .then(function () { return self.refresh(true, tries + 1); });
+            }
             self.state = { loading: false, error: describe(fallback.error), accounts: [], wallet: null, special: null, currency: '', derived: false, hasConsumption: false };
-            return self.finish();
+            self.cache = null;
+            self.loadedAt = 0;
+            if (board.renderUsage) board.renderUsage();
+            return self.state;
           }
           self.state = normaliseUsage(fallback.value);
           self.state.derived = true;
@@ -614,7 +624,7 @@
       Array.prototype.forEach.call(this.root.querySelectorAll('[data-tab]'), function (node) {
         node.classList.toggle('sx-active', node.dataset.tab === name);
       });
-      if (name === 'usage') { usageModule.refresh(); this.renderUsage(); }
+      if (name === 'usage') { usageModule.refresh(usageModule.state.error !== null); this.renderUsage(); }
       if (name === 'billing') { billingModule.load(1); this.renderBilling(); }
       if (name === 'transfers') { transfersModule.load(); this.renderTransfers(); }
       if (name === 'connectivity') { if (!connectivityModule.rows.length) connectivityModule.run(); this.renderConnectivity(); }
@@ -1016,7 +1026,6 @@
       navModule.start();
       menuModule.start();
       themeModule.apply(settings.theme);
-      usageModule.refresh();
       jobsModule.start();
       transfersModule.watch();
     });

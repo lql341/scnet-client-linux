@@ -5,6 +5,14 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-2
+
+### Fixed
+
+- Dark variants of `paper` and `claude` kept the light text tokens, so text rendered nearly invisible
+  on the dark surfaces. The dark blocks now set `--text`, `--text-secondary`, `--text-tertiary`,
+  `--color-ink` and the neutral button tokens alongside the surfaces.
+
 ## 4.1.2-1
 
 ### Target
