@@ -1,6 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=SCNet 计算服务
+Name[en]=SCNet Client
 GenericName=Science Compute Workspace
 Comment=国家超算互联网客户端
 Comment[en]=SCNet (National Supercomputing Internet) desktop client
