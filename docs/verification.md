@@ -226,7 +226,12 @@ Not working, recorded as a limitation:
 - **Computer use (CUA).** The native driver loads, but the client exposes no desktop observation tool in
   this build and there is no `cua-driver` executable on the system, so the agent reports that screen
   capture is unavailable. The bundled `resources/cua/worker.mjs` expects a driver the vendor ships only
-  for macOS and Windows.
+  for macOS and Windows. The skill declares `requires: bins: [cua-driver]`, and neither the vendor
+  archive nor `@trycua/cua-driver-linux-x64-gnu@0.34.1` contains that executable.
+  **Decision: not pursued for now.** The client's main paths — job submission, monitoring, results,
+  transfers — are command-line and API based, and the remaining use case, driving GUI-only scientific
+  or office software, has no concrete request yet. Revisit when one appears, and check for an official
+  Linux driver before assembling anything locally.
 - **Model switching** could not be exercised: the account exposes a single model, SCNet-Max, and the
   picker offers only reasoning levels and a link to model settings.
 

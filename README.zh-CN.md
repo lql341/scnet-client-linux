@@ -228,7 +228,7 @@ scnet-client-linux/
 | 范围 | 状态 |
 | --- | --- |
 | 登录、HPC 作业提交、SSH 会话、文件传输 | 未做端到端验证 |
-| 电脑操作（CUA） | 库可加载；点击/截图未验证；需要 X11/Wayland 权限与 `libXtst` |
+| 电脑操作（CUA） | 当前不可用：SDK 可加载，但 Linux 无 `cua-driver` 可执行文件，客户端也未暴露桌面工具。待出现明确的 GUI-only 流程再评估 |
 | 自动更新 | 不可用：更新源仅提供 macOS/Windows 产物，`electron-updater` 也无法替换 Linux 包体。升级方式为重新构建 |
 | 代码签名 | 无 |
 | 托盘图标 | 已在 `Recommends: libayatana-appindicator3-1 | libappindicator3-1` 中声明；库存在时指示器可正常注册，否则「关闭」会留下无窗口进程 |

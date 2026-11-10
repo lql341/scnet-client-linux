@@ -201,6 +201,10 @@ all checks passed
 
 - **电脑操作（CUA）**：原生驱动可加载，但本构建未向 agent 暴露桌面观察工具，系统中也没有
   `cua-driver` 可执行文件，因此 agent 报告无法截屏。随包的 `resources/cua/worker.mjs` 依赖厂商仅为
-  macOS 与 Windows 提供的驱动。
+  macOS 与 Windows 提供的驱动；技能声明了 `requires: bins: [cua-driver]`，而厂商归档与
+  `@trycua/cua-driver-linux-x64-gnu@0.34.1` 均不含该可执行文件。
+  **决定：暂不跟进。** 客户端主链路（作业提交、监控、取结果、传输）均基于命令行与 API；剩下的用途是
+  驱动只有图形界面的科研或办公软件，目前没有具体需求。待需求出现时再评估，并优先确认厂商是否有官方
+  Linux 驱动，而不是自行拼装。
 - **模型切换**：账户只开放 SCNet-Max 一个模型，选择器仅提供推理等级与「模型设置」入口，无法验证多模型切换。
 

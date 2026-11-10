@@ -247,7 +247,7 @@ sizes, and the same behaviour after unpacking the `.deb`. Procedure, commands an
 | Area | Status |
 | --- | --- |
 | Login, HPC job submission, SSH sessions, file transfer | Not exercised end to end |
-| Computer use (CUA) | Library loads; pointer/screenshot actions untested; requires X11/Wayland access and `libXtst` |
+| Computer use (CUA) | Non-functional here: the SDK loads, but no `cua-driver` executable ships for Linux and the client exposes no desktop tools. Deferred until a concrete GUI-only workflow needs it |
 | Auto-update | Not functional: the update feed serves macOS/Windows artifacts, and `electron-updater` cannot replace a Linux bundle. Upgrade by rebuilding |
 | Code signing | None |
 | Tray icon | Declared as `Recommends: libayatana-appindicator3-1 | libappindicator3-1`; the indicator is registered when the library is present, otherwise "close" leaves a windowless process |
