@@ -54,8 +54,27 @@
     return svg;
   }
 
+  /*
+   * Labels follow the interface language. The renderer sets documentElement.lang
+   * from the account language, so the hint matches the rest of the window instead
+   * of always carrying both languages.
+   */
+  function chinese() {
+    var lang = (document.documentElement.lang || '').toLowerCase();
+    return !lang || lang.indexOf('zh') === 0;
+  }
+
+  var TEXT = {
+    zh: { minimize: '最小化', maximize: '最大化', restore: '还原', close: '关闭' },
+    en: { minimize: 'Minimize', maximize: 'Maximize', restore: 'Restore', close: 'Close' },
+  };
+
+  function text(key) {
+    return (chinese() ? TEXT.zh : TEXT.en)[key];
+  }
+
   function label(maximized) {
-    return maximized ? '还原 / Restore' : '最大化 / Maximize';
+    return maximized ? text('restore') : text('maximize');
   }
 
   var maximizeButton = null;
@@ -121,13 +140,13 @@
       '-webkit-app-region:no-drag',
     ].join(';');
 
-    root.appendChild(button('minimize', '最小化 / Minimize', function () {
+    root.appendChild(button('minimize', text('minimize'), function () {
       host.invoke('window.minimize').catch(function () {});
     }));
     maximizeButton = button('maximize', label(false), toggleMaximize);
     maximizeButton.setAttribute('data-maximized', 'false');
     root.appendChild(maximizeButton);
-    root.appendChild(button('close', '关闭 / Close', function () {
+    root.appendChild(button('close', text('close'), function () {
       host.invoke('window.request-main-close').catch(function () {});
     }));
 

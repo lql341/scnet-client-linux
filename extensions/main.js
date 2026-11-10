@@ -14,8 +14,7 @@
   var host = window.host;
   if (!host || !host.context) return;
   if (window.__scnetExtLoaded) return;
-  // The compat renderer hosts the sign-in shell; no settings there.
-  if (/\/compat\//.test(location.pathname)) return;
+  var compat = /\/compat\//.test(location.pathname);
   window.__scnetExtLoaded = true;
 
   var KEYS = { palette: 'scnet.ext.palette', size: 'scnet.ext.size', lang: 'scnet.ext.lang' };
@@ -366,7 +365,10 @@
   // ------------------------------------------------------------------- startup
 
   function start() {
+    // The compat renderer hosts the sign-in shell and the job-submission page. It
+    // receives the palette and text size, but no menu entry and no dialog.
     apply();
+    if (compat) return;
     injectMenu();
     translateDom();
     var queued = false;

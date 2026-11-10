@@ -5,6 +5,25 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-8
+
+### Fixed
+
+- The first-paint bootstrap in the injected HTML still read `scnet.ext.theme`, the key used before the
+  appearance dialog was introduced, so the stored palette was applied only after the bundle ran and a
+  restart flashed the default theme. It now reads `scnet.ext.palette` and `scnet.ext.size`.
+- The compat renderer, which hosts the sign-in shell and the job-submission page, received neither
+  palette nor text size, so those pages reverted to the vendor defaults. It now applies both and skips
+  only the menu entry and the dialog.
+
+## 4.1.2-7
+
+### Changed
+
+- The window-control hints follow the interface language instead of always carrying both, matching
+  the rest of the window. The settings dialog keeps Chinese as its default, independently of the
+  vendor language.
+
 ## 4.1.2-6
 
 ### Fixed

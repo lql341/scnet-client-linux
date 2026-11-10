@@ -12,8 +12,10 @@ rendered by the vendor on every open and its styles are scoped with a `data-v` a
 injected item copies at runtime instead of hard-coding a hash. The extension stays out of the compat
 renderer that hosts the sign-in shell, and does nothing when `window.host` is unavailable.
 
-Choices are stored in `localStorage` under `scnet.ext.*` and applied at first paint by an inline head
-script, so a restart does not flash the default palette.
+Choices are stored in `localStorage` under `scnet.ext.*`. The injected `<head>` bootstrap applies the
+stored palette and text size before the bundle runs, in both renderers, so a restart does not flash the
+default theme; the compat renderer that hosts the sign-in shell and the job-submission page takes the
+palette and text size but no menu entry and no dialog.
 
 ## Palettes
 
@@ -42,7 +44,8 @@ own persistence, and a multiplier keeps the layout proportions intact.
 
 ## Language
 
-`中文` and `English` switch the strings this build contributes, plus a curated set of labels in the two
+The default is Chinese, independently of the vendor language. `中文` and `English` switch the strings
+this build contributes, plus a curated set of labels in the two
 places where the application is most exposed:
 
 | Container | Labels |

@@ -48,11 +48,13 @@ const PATCHES = [
     entry: 'main.js',
     stylesheet: 'theme.css',
     headBootstrap:
-      "<script>(function(){try{var t=localStorage.getItem('scnet.ext.theme');" +
-      "if(t&&t!=='system')document.documentElement.dataset.scnetTheme=t;}catch(e){}})();</script>",
+      "<script>(function(){try{var p=localStorage.getItem('scnet.ext.palette');" +
+      "var s=localStorage.getItem('scnet.ext.size');" +
+      "if(p&&p!=='system')document.documentElement.dataset.scnetTheme=p;" +
+      "if(s)document.documentElement.dataset.scnetSize=s;}catch(e){}})();</script>",
     summary:
-      'load the extension bundle (usage, billing, job notifications, diagnostics, themes) ' +
-      'and apply the stored theme before first paint',
+      'load the appearance settings (palette, text size, language) and apply the stored ' +
+      'palette and text size before first paint, in both renderers',
   },
 ];
 
