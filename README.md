@@ -88,14 +88,14 @@ build/linux/                                portable bundle
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.1-2_amd64.deb
+scnet-client_4.1.1-3_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.1-2_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.1-3_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
@@ -126,6 +126,13 @@ re-`chmod`s an existing `config.json`/`auth.json` to 0600, so a default-`umask` 
 leaves them world-readable. What it cannot do is fix the derivation itself — on a shared machine
 leave "记住密码" off and rely on the API-key path, and revoke keys from the SCNet console when a
 machine is retired.
+
+## Extension panel
+
+The build adds a small panel, injected into the renderer without editing vendor code: per-centre
+usage, bills with CSV export, transfer tasks, a connectivity check, console entry points and theme
+switching. Modules disable themselves when a host operation disappears. See
+[`docs/extension-design.md`](docs/extension-design.md).
 
 ## Replaced components
 

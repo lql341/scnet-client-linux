@@ -71,6 +71,32 @@
   --color-accent-hover: #1f57c3 !important;
 }
 
+:root[data-scnet-theme='paper']:is(.dark),
+:root[data-scnet-theme='paper']:is(.dark) body {
+  --color-surface-under: #14140f;
+  --color-surface: #1b1b16;
+  --color-surface-muted: #232320;
+  --color-surface-elevated: #232320;
+  --color-accent: #4e8ef7 !important;
+  --color-accent-hover: #7aa9fa !important;
+  --border-main: #ffffff1a;
+  --border-subtle: #ffffff12;
+  --border-heavy: #ffffff29;
+}
+
+:root[data-scnet-theme='claude']:is(.dark),
+:root[data-scnet-theme='claude']:is(.dark) body {
+  --color-surface-under: #1a1917;
+  --color-surface: #22201d;
+  --color-surface-muted: #2a2824;
+  --color-surface-elevated: #2a2824;
+  --color-accent: #e08a68 !important;
+  --color-accent-hover: #eda27f !important;
+  --border-main: #ffffff1a;
+  --border-subtle: #ffffff12;
+  --border-heavy: #ffffff2b;
+}
+
 :root[data-scnet-theme='claude'],
 :root[data-scnet-theme='claude'] body {
   --color-accent: #d97757 !important;
@@ -219,6 +245,21 @@
   gap: 8px;
   align-items: center;
   margin-top: 10px;
+}
+
+.sx-wrap {
+  flex-wrap: wrap;
+}
+
+.sx-link {
+  border: 0;
+  background: transparent;
+  color: var(--text-link, #2f6feb);
+  padding: 2px 0;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: default;
 }
 
 .sx-action {

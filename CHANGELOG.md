@@ -5,15 +5,18 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
-## Unreleased
+## 4.1.1-3
 
 ### Added
 
-- Extension bundle injected by `scripts/patch-vendor.cjs` (`extensions/`): per-centre usage with a
-  fallback to the account payload, a billing panel with CSV export, job state notifications, a
-  diagnostics report, and three themes (`system`, `paper`, `claude`).
-- The panel is documented in [`docs/extension-design.md`](docs/extension-design.md), including the
-  `usage.centers` payload the platform side still has to provide.
+- Extension bundle injected by `scripts/patch-vendor.cjs` from `extensions/`: per-centre usage with a
+  fallback to the account payload, a billing panel with CSV export, a transfer and file-task list, a
+  connectivity check, a diagnostics report, console entry points, and three themes (`system`, `paper`,
+  `claude`, each with a dark variant). The extension is inactive in the compat renderer that hosts
+  the sign-in shell.
+- `usage.centers` contract documented in [`docs/extension-design.md`](docs/extension-design.md);
+  consumption columns appear as soon as the platform provides the method.
+- CI checks the extension bundle's syntax and the presence of its files.
 
 ## 4.1.1-2
 

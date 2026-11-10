@@ -21,8 +21,9 @@ jobs:
       - name: Node syntax
         run: |
           node --check scripts/patch-vendor.cjs
-          node --check scripts/smoke-native.cjs
+          node --check extensions/main.js
           node --check scripts/window-controls.js
+          node --check scripts/smoke-native.cjs
 
       - name: Python syntax
         run: python3 -m py_compile scripts/extract-icons.py
@@ -77,6 +78,7 @@ jobs:
                    scripts/check-upstream.sh scripts/check-docs.sh \
                    scripts/patch-vendor.cjs scripts/smoke-native.cjs \
                    scripts/window-controls.js scripts/extract-icons.py \
+                   extensions/main.js extensions/theme.css \
                    packaging/launcher.sh packaging/debian/control.in \
                    packaging/debian/scnet-client.desktop \
                    packaging/debian/postinst packaging/debian/postrm \

@@ -22,6 +22,8 @@
   var host = window.host;
   if (!host || !host.context || !host.invoke) return;
   if (window.__scnetExtLoaded) return;
+  // The compat renderer hosts the sign-in shell: no panel there.
+  if (/\/compat\//.test(location.pathname)) return;
   window.__scnetExtLoaded = true;
 
   try {
@@ -373,6 +375,108 @@
     },
   };
 
+  // ----------------------------------------------------------------- transfers
+
+  var transfersModule = {
+    id: 'transfers',
+    rows: [],
+    loading: false,
+    error: null,
+    timer: null,
+
+    load: function () {
+      var self = this;
+      self.loading = true;
+      if (board.renderTransfers) board.renderTransfers();
+      return Promise.all([
+        scnet('transfers.list'),
+        scnet('file-tasks.list'),
+      ]).then(function (results) {
+        self.loading = false;
+        var transfer = results[0];
+        var tasks = results[1];
+        if (!transfer.ok && !tasks.ok) {
+          self.error = describe(transfer.error || tasks.error);
+          self.rows = [];
+        } else {
+          self.error = null;
+          self.rows = collectRows(transfer).concat(collectRows(tasks));
+        }
+        if (board.renderTransfers) board.renderTransfers();
+      });
+    },
+
+    watch: function () {
+      if (this.timer) return;
+      var self = this;
+      this.timer = setInterval(function () {
+        if (settings.panel === 'transfers') self.load();
+      }, 15000);
+    },
+  };
+
+  function collectRows(result) {
+    if (!result.ok || !result.value) return [];
+    var value = result.value;
+    var rows = value.items || value.records || value.list || value.rows || value.data || [];
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  // -------------------------------------------------------------- connectivity
+
+  var connectivityModule = {
+    id: 'connectivity',
+    rows: [],
+    running: false,
+    targets: [
+      ['api.scnet.cn', 'https://api.scnet.cn'],
+      ['www.scnet.cn', 'https://www.scnet.cn'],
+      ['dlcdn.scnet.cn', 'https://dlcdn.scnet.cn'],
+    ],
+
+    run: function () {
+      var self = this;
+      self.running = true;
+      if (board.renderConnectivity) board.renderConnectivity();
+      return Promise.all(self.targets.map(function (pair) {
+        return probeDetail(pair[1]).then(function (result) {
+          return { name: pair[0], url: pair[1], status: result.status, ms: result.ms };
+        });
+      })).then(function (rows) {
+        self.rows = rows;
+        self.running = false;
+        if (board.renderConnectivity) board.renderConnectivity();
+      });
+    },
+  };
+
+  function probeDetail(url) {
+    var started = performance.now();
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (controller) controller.abort(); }, 3000);
+    return fetch(url, { method: 'HEAD', mode: 'no-cors', signal: controller ? controller.signal : undefined })
+      .then(function () { return 'reachable'; }, function (error) { return 'unreachable (' + ((error && error.name) || 'error') + ')'; })
+      .then(function (status) {
+        clearTimeout(timer);
+        return { status: status, ms: Math.round(performance.now() - started) };
+      });
+  }
+
+  // ----------------------------------------------------------- console routes
+
+  var consoleRoutes = [
+    ['费用总览', '/ui/console6/index.html#/fee/fee-summary'],
+    ['账单明细', '/ui/console6/index.html#/fee/fee-list/shareJob'],
+    ['资源中心', '/ui/console6/index.html#/my-product/basic-resources/computing-cesource'],
+    ['资源申请', '/ac/console3/index.html#/ware/apply-cluster'],
+    ['反馈工单', '/ui/console6/index.html#/feedback/add'],
+    ['个人信息', '/ui/console/index.html#/personal/base-info'],
+  ];
+
+  function openRoute(route) {
+    return call('auth.open-authenticated-route', { route: route });
+  }
+
   // -------------------------------------------------------------- diagnostics
 
   var diagnosticsModule = {
@@ -461,6 +565,8 @@
       panel.appendChild(el('div', { class: 'sx-tabs' }, [
         tab('用量', 'usage'),
         tab('账单', 'billing'),
+        tab('传输', 'transfers'),
+        tab('连接', 'connectivity'),
         tab('设置', 'settings'),
       ]));
       var body = el('div', { class: 'sx-body' });
@@ -498,6 +604,8 @@
       });
       if (name === 'usage') { usageModule.refresh(); this.renderUsage(); }
       if (name === 'billing') { billingModule.load(1); this.renderBilling(); }
+      if (name === 'transfers') { transfersModule.load(); this.renderTransfers(); }
+      if (name === 'connectivity') { if (!connectivityModule.rows.length) connectivityModule.run(); this.renderConnectivity(); }
       if (name === 'settings') this.renderSettings();
     },
 
@@ -561,8 +669,76 @@
           text: '分中心用量接口尚未开放：当前列出账户所属中心与集群，消耗数据待接口上线后显示。',
         }));
       }
-      body.appendChild(el('button', { class: 'sx-action', type: 'button', text: '刷新' }))
+      var actions = el('div', { class: 'sx-actions' });
+      actions.appendChild(el('button', { class: 'sx-action', type: 'button', text: '刷新' }))
         .addEventListener('click', function () { usageModule.refresh(true); });
+      body.appendChild(actions);
+
+      body.appendChild(el('p', { class: 'sx-muted', text: '控制台页面在默认浏览器中打开，沿用当前登录态。' }));
+      var consoleRow = el('div', { class: 'sx-actions sx-wrap' });
+      consoleRoutes.forEach(function (pair) {
+        consoleRow.appendChild(el('button', { class: 'sx-link', type: 'button', text: pair[0] }))
+          .addEventListener('click', function () { openRoute(pair[1]); });
+      });
+      body.appendChild(consoleRow);
+    },
+
+    renderTransfers: function () {
+      if (!this.body || settings.panel !== 'transfers') return;
+      var body = this.body;
+      body.textContent = '';
+      if (transfersModule.loading) { body.appendChild(el('p', { class: 'sx-muted', text: '正在读取传输任务…' })); return; }
+      if (transfersModule.error) { body.appendChild(el('p', { class: 'sx-error', text: transfersModule.error })); return; }
+      if (!transfersModule.rows.length) {
+        body.appendChild(el('p', { class: 'sx-muted', text: '没有进行中的传输或文件任务。' }));
+        return;
+      }
+      var rows = transfersModule.rows;
+      var columns = [];
+      rows.forEach(function (row) {
+        Object.keys(row || {}).forEach(function (key) {
+          if (columns.indexOf(key) < 0 && columns.length < 5) columns.push(key);
+        });
+      });
+      var table = el('table', { class: 'sx-table' });
+      table.appendChild(el('thead', {}, [el('tr', {}, columns.map(function (key) { return el('th', { text: key }); }))]));
+      var tbody = el('tbody');
+      rows.forEach(function (row) {
+        tbody.appendChild(el('tr', {}, columns.map(function (key) {
+          var value = row[key];
+          if (typeof value === 'object' && value !== null) value = JSON.stringify(value);
+          return el('td', { text: value === null || value === undefined ? '—' : String(value) });
+        })));
+      });
+      table.appendChild(tbody);
+      body.appendChild(table);
+      body.appendChild(el('button', { class: 'sx-action', type: 'button', text: '刷新' }))
+        .addEventListener('click', function () { transfersModule.load(); });
+    },
+
+    renderConnectivity: function () {
+      if (!this.body || settings.panel !== 'connectivity') return;
+      var body = this.body;
+      body.textContent = '';
+      if (connectivityModule.running) { body.appendChild(el('p', { class: 'sx-muted', text: '正在探测…' })); return; }
+
+      var table = el('table', { class: 'sx-table' });
+      table.appendChild(el('thead', {}, [el('tr', {}, [
+        el('th', { text: '站点' }), el('th', { text: '结果' }), el('th', { text: '时延' }),
+      ])]));
+      var tbody = el('tbody');
+      connectivityModule.rows.forEach(function (row) {
+        tbody.appendChild(el('tr', {}, [
+          el('td', { text: row.name }),
+          el('td', { text: row.status }),
+          el('td', { text: row.ms + ' ms' }),
+        ]));
+      });
+      table.appendChild(tbody);
+      body.appendChild(table);
+      body.appendChild(el('p', { class: 'sx-muted', text: '探测以 HEAD 请求执行，各自三秒超时；no-cors 模式下无法读取状态码。' }));
+      body.appendChild(el('button', { class: 'sx-action', type: 'button', text: '重新探测' }))
+        .addEventListener('click', function () { connectivityModule.run(); });
     },
 
     renderBilling: function () {
@@ -665,6 +841,7 @@
       themeModule.apply(settings.theme);
       usageModule.refresh();
       jobsModule.start();
+      transfersModule.watch();
     });
   }
 
@@ -674,7 +851,10 @@
     usage: usageModule,
     billing: billingModule,
     jobs: jobsModule,
+    transfers: transfersModule,
+    connectivity: connectivityModule,
     diagnostics: diagnosticsModule,
+    openRoute: openRoute,
     theme: themeModule,
     settings: settings,
   };
