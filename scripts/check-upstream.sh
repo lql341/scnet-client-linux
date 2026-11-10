@@ -10,7 +10,9 @@ MAC_YML="${MAC_YML:-https://dlcdn.scnet.cn/client/mac/latest-mac.yml}"
 WIN_YML="${WIN_YML:-https://dlcdn.scnet.cn/client/win/latest.yml}"
 
 local_version="$(cat "$ROOT/VERSION")"
-electron_version="$(sed -n 's/^ELECTRON_VERSION="\${ELECTRON_VERSION:-\(.*\)}"$/\1/p' "$ROOT/scripts/build-linux.sh")"
+# shellcheck source=scripts/versions.env
+. "$ROOT/scripts/versions.env"
+electron_version="$ELECTRON_VERSION"
 
 upstream_mac="$(curl -fsSL --max-time 30 "$MAC_YML" | sed -n 's/^version: *//p' | head -1)"
 upstream_win="$(curl -fsSL --max-time 30 "$WIN_YML" | sed -n 's/^version: *//p' | head -1)"

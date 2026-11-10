@@ -2,7 +2,7 @@
 
 对厂商发行包的分析，以及每项替换的依据。所有观察均针对 SCNet 桌面客户端 **4.1.1** 的
 macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码片段；未经证实的内容在
-[`verification_CN.md`](verification_CN.md) 中标注为未验证。
+[`verification.zh-CN.md`](verification.zh-CN.md) 中标注为未验证。
 
 ## 1. 分发方式
 
@@ -73,8 +73,8 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
 由此可得两个对本仓库有决定作用的事实：
 
 - agent 运行时被打进应用，在 Electron 主进程内运行；对话、工具与技能链路不依赖任何平台专属服务。
-- `@earendil-works/pi-*` 打了补丁，因此从 npm 源码重建并不等价于发行包。这也是本项目逐字节
-  沿用厂商 `app.asar`、而不重建它的原因。
+- `@earendil-works/pi-*` 打了补丁，因此从 npm 源码重建并不等价于发行包。本项目因此沿用厂商
+  `app.asar`，不进行重建。
 
 依赖块自 4.1.0 起未变：固定的原生包版本（4.3 节）、`node-pty` 与两个独立二进制（4.4、4.5 节）
 全部沿用，因此 4.1.1 的升级只需改版本号与校验和。
@@ -151,7 +151,7 @@ const dirs = ['build/Release', 'build/Debug', `prebuilds/${process.platform}-${p
 
 ### 4.3 canvas、cua-driver、ubjs
 
-三者都被厂商清单精确固定，因此 Linux 包必须使用相同版本，而不是 `latest`：
+三者均被厂商清单精确固定，Linux 包因此必须使用与之一致的版本；`latest` 不在考虑范围内：
 
 | 模块 | Linux 包 | 说明 |
 | --- | --- | --- |
@@ -291,6 +291,10 @@ Linux 上的结果：当前主路由没有厂商控件簇，由后备实现提�
 
 ## 7. 打包
 
+打包元数据以文件形式维护，不再内联生成：`packaging/launcher.sh` 安装为启动器，
+`packaging/debian/` 存放 `control` 模板、桌面入口与维护者脚本。构建时替换版本号、上游版本与
+安装体积，再调用 `dpkg-deb`。
+
 ```text
 /opt/scnet-client/                      build/linux 产物
 /usr/bin/scnet-client -> /opt/scnet-client/launcher.sh
@@ -309,12 +313,13 @@ box 滤波生成（`scripts/extract-icons.py`）。安装 16 至 1024 共 13 个
 依赖同时列出 `t64` 与旧包名，以便在 Debian 12/13 与 Ubuntu 22.04/24.04 上安装。
 
 `app-update.yml` 原样复制。Linux 上 `electron-updater` 无法更新非 AppImage 布局，且更新源
-本身不含 Linux 产物，因此更新入口在设计上即不可用，而不是被补丁禁用。
+本身不含 Linux 产物，因此更新入口在设计上即不可用，亦未通过补丁禁用。
 
 ## 8. 不变量
 
-- `app.asar` 中的 JavaScript 除 `patch-vendor.cjs` 声明的三处窗口装饰改动外不做修改，其余字节
-  与厂商一致。
-- 原生模块版本等于厂商清单固定的版本。
+- 不修改任何厂商 JavaScript 文件。归档以完整解包 `node_modules` 的方式重新打包，新增内容仅限
+  两个 HTML 入口中的各一个 `<script>` 标签与其加载的脚本文件，两者均由 `scripts/patch-vendor.cjs`
+  声明。
+- 原生模块版本等于厂商清单固定的版本，该版本只在 `scripts/versions.env` 中维护一份。
 - 所有平台相关产物在构建期被校验（`scripts/smoke-native.cjs`）。
 - 仓库不含厂商二进制；厂商归档在构建期下载并校验。

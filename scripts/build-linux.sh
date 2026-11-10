@@ -25,26 +25,21 @@ CACHE="$BUILD/cache"
 WORK="$BUILD/work"
 DIST="$BUILD/linux"
 
-# Versions. Everything except APP_VERSION can be overridden from the environment.
+# The upstream release comes from VERSION; every pinned dependency and the
+# packaging revision come from scripts/versions.env, where each value can be
+# overridden from the environment.
 APP_VERSION="${APP_VERSION:-$(cat "$ROOT/VERSION")}"
-DEB_REVISION="${DEB_REVISION:-2}"   # packaging revision, independent of the upstream version
-ELECTRON_VERSION="${ELECTRON_VERSION:-44.7.0}"
-CANVAS_VERSION="${CANVAS_VERSION:-1.0.2}"
-CUA_DRIVER_VERSION="${CUA_DRIVER_VERSION:-0.34.1}"
-UBJS_VERSION="${UBJS_VERSION:-0.31.0-3}"
-NODE_PTY_VERSION="${NODE_PTY_VERSION:-1.1.0}"
-AGENT_BROWSER_VERSION="${AGENT_BROWSER_VERSION:-0.39.0}"
-UV_VERSION="${UV_VERSION:-0.9.9}"
+# shellcheck source=scripts/versions.env
+. "$ROOT/scripts/versions.env"
 
 MAC_BASE_URL="${MAC_BASE_URL:-https://dlcdn.scnet.cn/client/mac}"
 MAC_ZIP_URL="$MAC_BASE_URL/SCNet-$APP_VERSION-x64.zip"
-# SHA-512 of SCNet-<version>-x64.zip, as published in latest-mac.yml (base64 decoded).
-MAC_ZIP_SHA512="${MAC_ZIP_SHA512:-a81c7fd1b28c3e2f52105c48dbb290a821705f55deed347bc66c1a8dfab0eb574e0f8f05d16ded94e31d7be9d34adee3f3eb9106ec386afb25129a0e8f79dcd2}"
 ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron}"
 UV_INDEX="${UV_INDEX:-https://pypi.tuna.tsinghua.edu.cn/simple/uv/}"
 
 MAC_ZIP="$ROOT/mac-x64.zip"
 APP_RES="$ROOT/app/计算服务.app/Contents/Resources"
+DEB_TEMPLATES="$ROOT/packaging/debian"
 BUILD_DEB=1
 
 usage() {
@@ -231,42 +226,7 @@ log "7/8 icon and launcher"
 rm -rf "$BUILD/assets/icons"
 python3 "$ROOT/scripts/extract-icons.py" "$APP_RES/icon.icns" "$BUILD/assets/icons" | sed 's/^/    /'
 cp "$BUILD/assets/icons/1024.png" "$BUILD/assets/icon.png"
-cat > "$DIST/launcher.sh" <<'LAUNCHER'
-#!/bin/sh
-# Launcher: keep the Chromium sandbox whenever the system can provide one.
-APP="$(dirname "$(readlink -f "$0")")"
-SB="$APP/chrome-sandbox"
-
-# Keep client state private. config.json holds the session token and the
-# remembered-login blob, and Electron writes it with the ambient umask (0644 on
-# a default Debian/Ubuntu install), which exposes both to other local users.
-umask 077
-for f in "$HOME/.config/scnet-client/config.json" \
-         "$HOME/.sclaw/agent/auth.json"; do
-  [ -f "$f" ] && chmod go-rwx "$f" 2>/dev/null
-done || true
-
-sandbox_usable() {
-  # 1) setuid-root chrome-sandbox
-  if [ -u "$SB" ] && [ "$(stat -c %u "$SB" 2>/dev/null)" = "0" ]; then
-    return 0
-  fi
-  # 2) unprivileged user namespaces (Chromium's userns sandbox)
-  [ "$(cat /proc/sys/user/max_user_namespaces 2>/dev/null || echo 0)" -gt 0 ] || return 1
-  case "$(cat /proc/sys/kernel/unprivileged_userns_clone 2>/dev/null)" in
-    0) return 1 ;;
-  esac
-  case "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null)" in
-    1) return 1 ;;   # Ubuntu 23.10+ restricts userns to profiled binaries
-  esac
-  return 0
-}
-
-if [ "${SCNET_NO_SANDBOX:-0}" = "1" ] || ! sandbox_usable; then
-  exec "$APP/scnet-client" --no-sandbox "$@"
-fi
-exec "$APP/scnet-client" "$@"
-LAUNCHER
+cp "$ROOT/packaging/launcher.sh" "$DIST/launcher.sh"
 chmod +x "$DIST/launcher.sh"
 note "ok"
 
@@ -283,66 +243,17 @@ if [ "$BUILD_DEB" -eq 1 ]; then
     cp "$icon" "$PKG/usr/share/icons/hicolor/${size}x${size}/apps/scnet-client.png"
   done
   ln -sf /opt/scnet-client/launcher.sh "$PKG/usr/bin/scnet-client"
-  cat > "$PKG/usr/share/applications/scnet-client.desktop" <<'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=SCNet 计算服务
-Name[en]=SCNet Client
-GenericName=Science Compute Workspace
-Comment=国家超算互联网客户端
-Comment[en]=SCNet (National Supercomputing Internet) desktop client
-Exec=/opt/scnet-client/launcher.sh %U
-Icon=scnet-client
-Terminal=false
-Categories=Development;
-Keywords=scnet;hpc;supercomputing;science;compute;计算;
-StartupWMClass=scnet-client
-DESKTOP
+  cp "$DEB_TEMPLATES/scnet-client.desktop" "$PKG/usr/share/applications/scnet-client.desktop"
   if command -v desktop-file-validate >/dev/null 2>&1; then
     desktop-file-validate "$PKG/usr/share/applications/scnet-client.desktop" || die "invalid desktop entry"
   fi
-  cat > "$PKG/DEBIAN/control" <<CONTROL
-Package: scnet-client
-Version: $APP_VERSION-$DEB_REVISION
-Section: devel
-Priority: optional
-Architecture: amd64
-Installed-Size: 490000
-Maintainer: local rebuild <local@localhost>
-Depends: libgtk-3-0t64 | libgtk-3-0, libnss3, libasound2t64 | libasound2, libx11-xcb1, libxss1, libxtst6, libgbm1, libdrm2, libatspi2.0-0t64 | libatspi2.0-0, libcups2t64 | libcups2, fonts-noto-cjk, xdg-utils
-Recommends: libu2f-udev, libayatana-appindicator3-1 | libappindicator3-1
-Description: SCNet Client (计算服务) - unofficial Linux build
- Unofficial Linux port of the official SCNet desktop client, assembled from
- the upstream macOS Electron build $APP_VERSION with Linux-native replacements
- for the platform-specific components. Includes the AI workspace, skills,
- connectors, HPC job tooling, local terminal and file handling.
-CONTROL
-  cat > "$PKG/DEBIAN/postinst" <<'POSTINST'
-#!/bin/sh
-set -e
-if [ -f /opt/scnet-client/chrome-sandbox ]; then
-  chown root:root /opt/scnet-client/chrome-sandbox || true
-  chmod 4755 /opt/scnet-client/chrome-sandbox || true
-fi
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f -q /usr/share/icons/hicolor || true
-fi
-if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database -q /usr/share/applications || true
-fi
-exit 0
-POSTINST
-  cat > "$PKG/DEBIAN/postrm" <<'POSTRM'
-#!/bin/sh
-set -e
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -f -q /usr/share/icons/hicolor || true
-fi
-if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database -q /usr/share/applications || true
-fi
-exit 0
-POSTRM
+  installed_size="$(du -sk "$PKG/opt/scnet-client" | cut -f1)"
+  sed -e "s|@VERSION@|$APP_VERSION-$DEB_REVISION|" \
+      -e "s|@UPSTREAM_VERSION@|$APP_VERSION|" \
+      -e "s|@INSTALLED_SIZE@|$installed_size|" \
+      "$DEB_TEMPLATES/control.in" > "$PKG/DEBIAN/control"
+  cp "$DEB_TEMPLATES/postinst" "$PKG/DEBIAN/postinst"
+  cp "$DEB_TEMPLATES/postrm" "$PKG/DEBIAN/postrm"
   chmod 755 "$PKG/DEBIAN/postinst" "$PKG/DEBIAN/postrm"
   fakeroot dpkg-deb --build -Zxz "$PKG" "$ROOT/scnet-client_${APP_VERSION}-${DEB_REVISION}_amd64.deb" >/dev/null
   note "$ROOT/scnet-client_${APP_VERSION}-${DEB_REVISION}_amd64.deb"

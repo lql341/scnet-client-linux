@@ -1,0 +1,16 @@
+#!/bin/sh
+# Grant the Chromium sandbox helper its setuid bit, then refresh the icon and
+# desktop caches. Failures here are not fatal: the launcher falls back to
+# --no-sandbox when the helper is unusable.
+set -e
+if [ -f /opt/scnet-client/chrome-sandbox ]; then
+  chown root:root /opt/scnet-client/chrome-sandbox || true
+  chmod 4755 /opt/scnet-client/chrome-sandbox || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -f -q /usr/share/icons/hicolor || true
+fi
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database -q /usr/share/applications || true
+fi
+exit 0

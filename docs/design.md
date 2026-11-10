@@ -77,8 +77,7 @@ Two consequences matter for this repository:
 - The agent runtime is bundled and runs inside the Electron main process; no platform-specific
   server is involved in the conversation, tool or skill path.
 - The `@earendil-works/pi-*` packages are patched, so a rebuild from npm sources is not equivalent
-  to the shipped bundle. This is why the vendor `app.asar` is reused verbatim instead of
-  reconstructed.
+  to the shipped bundle. The vendor `app.asar` is therefore reused rather than reconstructed.
 
 The dependency block is unchanged since 4.1.0: the pinned native versions (section 4.3), `node-pty`
 and the two standalone binaries (sections 4.4, 4.5) all carry over, so the 4.1.1 bump is a version
@@ -263,8 +262,8 @@ minimize, maximize/restore and close **only while no `.window-tools` element exi
 itself as soon as the shell renders the vendor cluster. The maximize glyph and label follow
 `host.invoke('window.is-maximized')`: they are refreshed after a click and on resize, so a maximize
 performed by the window manager (double-click on the drag strip, Super+Up) is reflected too. The
-script is inert on other platforms and adds no controls to windows that already have them, so there
-is exactly one cluster at any time.
+script is inactive on other platforms and adds no controls to windows that already have them, which
+keeps the number of clusters at one.
 
 The result on Linux: on the current main route, where the vendor cluster is absent, the fallback
 provides minimize/maximize/close at the top right (verified: 1200×768 → 1920×1047 and back). Where
@@ -319,6 +318,11 @@ switch to `safeStorage`/Keychain for a real fix. Documented in the README, uncha
 
 ## 7. Packaging
 
+The package metadata is maintained as files rather than generated inline: `packaging/launcher.sh`
+is installed as the launcher, and `packaging/debian/` holds the `control` template, the desktop
+entry and the maintainer scripts. The build substitutes the version, the upstream version and the
+installed size, then runs `dpkg-deb`.
+
 ```text
 /opt/scnet-client/                      bundle from build/linux
 /usr/bin/scnet-client -> /opt/scnet-client/launcher.sh
@@ -345,8 +349,11 @@ non-functional by design rather than by patch.
 
 ## 8. Invariants
 
-- `app.asar` JavaScript is unmodified; the archive is only repacked with a different unpack set.
-- Native module versions equal the versions pinned by the vendor manifest.
+- No vendor JavaScript file is edited. The archive is repacked with the whole of `node_modules`
+  unpacked, and the only additions are one `<script>` tag in each of the two HTML entry points plus
+  the script file it loads, both declared in `scripts/patch-vendor.cjs`.
+- Native module versions equal the versions pinned by the vendor manifest, which are held once in
+  `scripts/versions.env`.
 - Every platform-specific artifact is verified at build time (`scripts/smoke-native.cjs`).
 - The repository tree carries no vendor binaries; the vendor archive is fetched and checksum
   verified at build time.

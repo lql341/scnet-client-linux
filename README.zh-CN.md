@@ -5,8 +5,8 @@
 将官方 SCNet 客户端（应用名「计算服务」，bundle identifier `com.sugon.sacp`）的 macOS
 Electron 发行包，转换为可运行的 Linux x64 构建流水线。
 
-当前目标版本：**4.1.1**（Electron **44.7.0**），见 [`VERSION`](VERSION)。
-打包修订号见 `DEB_REVISION`（当前 `4.1.1-1`；随 4.1.1 重新从 1 计数，已含最大化/还原按钮）。
+当前目标版本：**4.1.1**（Electron **44.7.0**），见 [`VERSION`](VERSION)。打包修订号 **2**，
+见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ```bash
 scripts/check-upstream.sh   # 对比本仓库目标版本与线上发行源
@@ -27,12 +27,14 @@ scripts/check-upstream.sh   # 对比本仓库目标版本与线上发行源
 
 不包含：
 
-- 对厂商 JavaScript 的任何修改：`app.asar` 内容逐字节沿用；
+- 对厂商 JavaScript 的修改：厂商文件一律按发行内容使用，新增内容仅为两个 HTML 入口中的各一个
+  `<script>` 标签及其加载的文件；
 - 功能重写；
-- 支持承诺。这不是官方发行版。
+- 官方支持承诺。本构建与厂商无关联。
 
 仓库中不含厂商二进制与构建产物。构建时从厂商 CDN 下载归档，并按 `latest-mac.yml` 公布的
-SHA-512 校验。仓库不发布预构建包：需自行运行流水线，安装生成的未签名 `.deb`（内含厂商客户端本体）。
+SHA-512 校验。仓库不发布预构建包，可安装的 `.deb` 只能由流水线生成；该包内含厂商客户端本体，
+且未签名。
 
 ## 环境要求
 
@@ -152,12 +154,12 @@ Windows（`titleBarOverlay`）上向平台索取按钮。Linux 既没有系统�
 
 [`scripts/window-controls.js`](scripts/window-controls.js) 仅在**不存在 `.window-tools` 元素时**
 通过既有 preload 桥渲染最小化、最大化/还原与关闭三个按钮，一旦外壳渲染出厂商控件簇即自行移除。
-最大化状态经 `host.invoke('window.is-maximized')` 读取：点击后、以及窗口尺寸变化时（窗口管理器
-双击标题栏拖动区或快捷键最大化）都会重新查询，因此图标与提示不会停留在旧状态。它在其他平台不
-生效，因此任一时刻只有一套控件。
+最大化状态经 `host.invoke('window.is-maximized')` 读取：点击后以及窗口尺寸变化时（窗口管理器
+双击标题栏拖动区或使用快捷键最大化）都会重新查询，图标与提示不会停留在旧状态。该脚本在其他平台
+不生效，因此任一时刻只有一套控件。
 
-除此之外 `app.asar` 逐字节沿用：这是对厂商目录树的唯一改动，且为增量改动（一个 `index.html`
-标签加一个新文件）。
+`app.asar` 中其余文件均按发行内容沿用。上述改动为增量改动：两个 HTML 入口各一个 `<script>`
+标签，外加该标签加载的文件。
 
 ## 图标
 
@@ -165,28 +167,36 @@ Windows（`titleBarOverlay`）上向平台索取按钮。Linux 既没有系统�
 共安装 13 个尺寸（16–1024）到 `/usr/share/icons/hicolor/<size>x<size>/apps/`，并在
 `postinst`/`postrm` 中刷新图标缓存。
 
-只装一张 1024 px 图像并不够：菜单与面板按主题索引解析 `Icon=`，主题无法满足请求尺寸、或
-`icon-theme.cache` 陈旧时都不会显示图标——这正是此前菜单没有图标的原因。
+仅安装一张 1024 px 图像不够：菜单与面板按主题索引解析 `Icon=`，主题无法满足请求尺寸或
+`icon-theme.cache` 陈旧时均不显示图标，此前菜单缺少图标即由此造成。
 
-各项替换的依据见 [`docs/design_CN.md`](docs/design_CN.md)。
+各项替换的依据见 [`docs/design.zh-CN.md`](docs/design.zh-CN.md)，文档索引见
+[`docs/README.md`](docs/README.md)。
 
 ## 仓库结构
 
 ```text
 scnet-client-linux/
 ├── VERSION                        目标上游版本
-├── README.md / README_CN.md       概览，英文 / 中文
+├── CHANGELOG.md                   按打包修订记录的仓库变更
+├── README.md / README.zh-CN.md    概览，英文 / 中文
 ├── scripts/
-│   ├── build-linux.sh             构建流水线（8 个阶段，幂等）
+│   ├── build-linux.sh             构建流水线（阶段 0–8，幂等）
+│   ├── versions.env               固定依赖版本与打包修订号
 │   ├── check-upstream.sh          对比目标版本与线上发行源
+│   ├── check-docs.sh              校验文档与版本来源一致
 │   ├── patch-vendor.cjs           窗口装饰补丁（精确匹配，漂移即失败）
 │   ├── window-controls.js         Linux 后备窗口控件（最小化/最大化/关闭）
 │   ├── smoke-native.cjs           原生产物冒烟测试（构建过程中执行）
 │   └── extract-icons.py           从 .icns 提取并重采样图标集
+├── packaging/
+│   ├── launcher.sh                按沙箱能力选择启动参数，安装为 launcher.sh
+│   └── debian/                    control.in、桌面入口、postinst、postrm
 ├── docs/
-│   ├── design.md / design_CN.md          包结构分析、替换依据、打包决策
-│   ├── verification.md / verification_CN.md  验证流程、实测结果、未知项
-│   └── screenshot-linux.png              Linux 窗口（含原生窗口控件）
+│   ├── README.md                   文档索引与编辑约定
+│   ├── design.md / design.zh-CN.md          包结构分析、替换依据、打包决策
+│   ├── verification.md / verification.zh-CN.md  验证流程、实测结果、未知项
+│   └── assets/screenshot-linux.png             Linux 窗口（含后备窗口控件）
 └── .github/workflows/check.yml    静态检查与策略检查（禁止提交厂商二进制）
 ```
 
@@ -203,7 +213,7 @@ scnet-client-linux/
 窗口标题「计算服务」、尺寸 1200×768，右上角为最小化、最大化/还原与关闭；最大化经控件点击与
 窗口管理器两条路径验证，图标随之同步，登录页与登录后的主路由都覆盖到；最小化通过模拟点击验证；
 图标经 `Gtk.IconTheme` 在 7 个尺寸下解析成功，且解包 `.deb` 后行为相同。命令与结果见
-[`docs/verification_CN.md`](docs/verification_CN.md)。
+[`docs/verification.zh-CN.md`](docs/verification.zh-CN.md)。
 
 ## 已知限制
 
@@ -218,33 +228,35 @@ scnet-client-linux/
 | 平铺窗口管理器、分数缩放 | 未验证；最大化按钮依赖窗口管理器对 frameless 窗口的处理 |
 | 同一配置目录多实例 | 受单实例锁与会话恢复影响，偶发无窗口启动；终止残留实例后重试 |
 | MCP OAuth（第三方服务） | 授权走 `127.0.0.1` 回环重定向，流程可完成；但厂商只在 macOS（AppleScript）与 Windows（`oauth-return.ps1`）上关闭并唤起浏览器标签，Linux 上该标签会留在浏览器里。一方连接器用 SCNet 会话授权，无需 OAuth |
-| 厂商支持 | 无；这不是官方发行版 |
+| 厂商支持 | 无；非官方发行版 |
 
 ## 升级到新的上游版本
 
-1. `scripts/check-upstream.sh` 给出新版本与文件清单。
-2. 更新 `VERSION` 与 `MAC_ZIP_SHA512`（x64 zip 的 SHA-512，由 `latest-mac.yml` 的 base64 解码）。
+1. `scripts/check-upstream.sh` 给出新版本与线上发行源的文件清单。
+2. 更新 `VERSION`，并更新 [`scripts/versions.env`](scripts/versions.env) 中的 `MAC_ZIP_SHA512`
+   （x64 zip 的 SHA-512，由 `latest-mac.yml` 的 base64 解码）。
 3. 若内置 Electron 版本变化（`Frameworks/Electron Framework.framework/Versions/A/Resources/
-   Info.plist`），更新 `ELECTRON_VERSION`；`node-pty` 会自动重编译。同时确认
-   `scripts/patch-vendor.cjs` 的补丁模式仍存在——缺失时构建会失败，需要按新的窗口代码重新推导，
-   而不是忽略。
-4. 依据新的 `app.asar/package.json` 对齐原生模块版本（`CANVAS_VERSION`、
+   Info.plist`），在同一文件中更新 `ELECTRON_VERSION`；`node-pty` 会自动重新编译。确认
+   `scripts/patch-vendor.cjs` 的补丁模式仍然匹配：缺失时构建失败，需按新包的窗口代码重新推导。
+4. 依据新的 `app.asar/package.json` 对齐原生模块与二进制版本（`CANVAS_VERSION`、
    `CUA_DRIVER_VERSION`、`UBJS_VERSION`、`NODE_PTY_VERSION`、`AGENT_BROWSER_VERSION`、
-   `UV_VERSION`）。
-5. 对比新旧 `Resources/` 目录树：阶段 6 会复制 `agent-plugins`、`agent-skills`、`cli`、`cua`、
+   `UV_VERSION`），均在 `scripts/versions.env` 中。
+5. 对比新旧 `Resources/` 目录树。阶段 6 会复制 `agent-plugins`、`agent-skills`、`cli`、`cua`、
    `en.lproj`、`tray*.png`、`app-update.yml` 与 OAuth 相关图片；上游新增、改名或删除的条目
-   （4.1.1 删除了 `connectors/`、`home-scenarios/`，新增两个 OAuth PNG）必须与该清单对齐，
-   否则 `cp -a` 会使构建失败。
-6. 重新构建；内置冒烟测试必须通过，然后按 [`docs/verification_CN.md`](docs/verification_CN.md)
-   重做交互验证。
+   （4.1.1 删除了 `connectors/`、`home-scenarios/`，新增两个 OAuth PNG）须与该清单对齐，否则
+   `cp -a` 会使构建失败。
+6. 在 [`CHANGELOG.md`](CHANGELOG.md) 中为新版本 `<version>-1` 增加条目。
+7. 重新构建；内置冒烟测试必须通过。随后运行 `scripts/check-docs.sh`，并按
+   [`docs/verification.zh-CN.md`](docs/verification.zh-CN.md) 重做交互验证。
 
-若上游新增原生依赖（`.node`、`.so`），必须补齐对应的官方 `linux-x64-gnu` 变体，否则相关功能
-会在运行时失败。
+若上游新增原生依赖（`.node`、`.so`），须补齐对应的官方 `linux-x64-gnu` 变体，否则相关功能会在
+运行时失败。
 
 ## 文档
 
-- [`docs/design_CN.md`](docs/design_CN.md) — 上游包结构分析、替换依据、asar 与 ABI 决策、打包布局
-- [`docs/verification_CN.md`](docs/verification_CN.md) — 验证流程、实测结果、剩余未知项
+- [`CHANGELOG.md`](CHANGELOG.md) — 按打包修订记录的仓库变更
+- [`docs/design.zh-CN.md`](docs/design.zh-CN.md) — 上游包结构分析、替换依据、asar 与 ABI 决策、打包布局
+- [`docs/verification.zh-CN.md`](docs/verification.zh-CN.md) — 验证流程、实测结果、剩余未知项
 
 ## 免责声明
 

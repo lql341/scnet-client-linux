@@ -1,12 +1,13 @@
 # scnet-client-linux
 
-[中文](README_CN.md) | English
+[中文](README.zh-CN.md) | English
 
 Build pipeline that produces a Linux x64 variant of the official SCNet desktop client
 (application name 计算服务, bundle identifier `com.sugon.sacp`) from the vendor's macOS
 Electron distribution.
 
-Current target: **4.1.1** (Electron **44.7.0**), see [`VERSION`](VERSION).
+Current target: **4.1.1** (Electron **44.7.0**), see [`VERSION`](VERSION). Packaging revision
+**2**, see [`CHANGELOG.md`](CHANGELOG.md).
 
 ```bash
 scripts/check-upstream.sh   # compare this repository's target with the live vendor feed
@@ -29,14 +30,15 @@ In scope:
 
 Out of scope:
 
-- any modification of the vendor's JavaScript: `app.asar` contents are used byte-for-byte;
+- modification of the vendor's JavaScript: every vendor file is used as shipped, the only additions
+  being one `<script>` tag in the two HTML entry points and the file it loads;
 - reimplementation of application features;
 - support commitments. This is not an official distribution.
 
 The repository tree contains no vendor binaries and no build outputs. The vendor archive is
 fetched from the vendor CDN at build time and verified against the SHA-512 published in
-`latest-mac.yml`. Nothing prebuilt is published: run the pipeline and install the resulting
-unsigned `.deb`, which contains the vendor client.
+`latest-mac.yml`. No prebuilt package is published: the pipeline is the only source of an
+installable `.deb`, which contains the vendor client and is unsigned.
 
 ## Requirements
 
@@ -167,11 +169,11 @@ missing:
 close **only while no `.window-tools` element exists**, and removes itself once the shell renders
 the vendor cluster. The maximize state is read through `host.invoke('window.is-maximized')` and
 re-queried after a click and on resize, so a maximize performed by the window manager (double-click
-on the drag strip, Super+Up) does not leave a stale glyph. It is inert on other platforms, so there
-is exactly one set of controls at any time.
+on the drag strip, Super+Up) does not leave a stale glyph. The script is inactive on other
+platforms, which keeps the number of control clusters at one.
 
-`app.asar` is otherwise reused byte for byte: this is the only modification to the vendor tree,
-and it is additive (an `index.html` tag plus one new file).
+Every other file in `app.asar` is reused as shipped. The modification is additive: one `<script>`
+tag in each of the two HTML entry points, plus the file it loads.
 
 ## Icons
 
@@ -181,7 +183,7 @@ resamples the missing sizes, installing 13 sizes (16–1024) into
 
 A single 1024 px image is not enough: menu and panel implementations resolve `Icon=` through the
 theme index, and a theme that cannot satisfy the requested size — or a stale `icon-theme.cache` —
-renders nothing. That is why the earlier package had no menu icon.
+renders nothing. This accounted for the absence of a menu icon in the earlier package.
 
 See [`docs/design.md`](docs/design.md) for the reasoning behind each substitution.
 
@@ -190,18 +192,25 @@ See [`docs/design.md`](docs/design.md) for the reasoning behind each substitutio
 ```text
 scnet-client-linux/
 ├── VERSION                        Target upstream version
-├── README.md / README_CN.md       Overview, English / Chinese
+├── CHANGELOG.md                   Repository changes per packaging revision
+├── README.md / README.zh-CN.md    Overview, English / Chinese
 ├── scripts/
-│   ├── build-linux.sh             Build pipeline (8 stages, idempotent)
-│   ├── check-upstream.sh          Compare target with the live vendor feed
-│   ├── patch-vendor.cjs           Window-decoration patches (exact match, fails on drift)
+│   ├── build-linux.sh             Build pipeline (stages 0–8, idempotent)
+│   ├── versions.env               Pinned dependency versions, packaging revision
+│   ├── check-upstream.sh          Compare the target with the live vendor feed
+│   ├── check-docs.sh              Assert documentation matches the version sources
+│   ├── patch-vendor.cjs           Window-decoration patch (exact match, fails on drift)
 │   ├── window-controls.js         Linux fallback window controls (min/max/close)
 │   ├── smoke-native.cjs           Native artifact smoke test (runs inside the build)
 │   └── extract-icons.py           Icon set extraction and resampling from .icns
+├── packaging/
+│   ├── launcher.sh                Sandbox-aware launcher, installed as launcher.sh
+│   └── debian/                    control.in, desktop entry, postinst, postrm
 ├── docs/
-│   ├── design.md / design_CN.md         Package analysis, substitutions, packaging decisions
-│   ├── verification.md / verification_CN.md   Procedure, observed results, unknowns
-│   └── screenshot-linux.png             Linux window with native window controls
+│   ├── README.md                  Documentation index and editing rules
+│   ├── design.md / design.zh-CN.md         Package analysis, substitutions, packaging decisions
+│   ├── verification.md / verification.zh-CN.md   Procedure, observed results, unknowns
+│   └── assets/screenshot-linux.png             Linux window with the fallback controls
 └── .github/workflows/check.yml    Lint and policy checks (no vendor binaries in tree)
 ```
 
@@ -220,8 +229,8 @@ Interactive verification was performed on Debian 13 x64/X11 for 4.1.0 and repeat
 x64/X11 for 4.1.1: window titled 计算服务 at 1200×768 with minimize, maximize/restore and close at
 the top right; maximize was verified both through the control and through the window manager, with
 the glyph following the state, on the sign-in route and on the logged-in main route. Minimize was
-verified by simulated click, icon resolution through `Gtk.IconTheme` at seven sizes, and the same
-behaviour after unpacking the `.deb`. Procedure, commands and results:
+verified by simulated click, the icon resolved through `Gtk.IconTheme` at the seven requested
+sizes, and the same behaviour after unpacking the `.deb`. Procedure, commands and results:
 [`docs/verification.md`](docs/verification.md).
 
 ## Known limitations
@@ -241,28 +250,32 @@ behaviour after unpacking the `.deb`. Procedure, commands and results:
 
 ## Updating to a new upstream release
 
-1. `scripts/check-upstream.sh` reports the new version and file list.
-2. Update `VERSION` and `MAC_ZIP_SHA512` (SHA-512 of the x64 zip, base64-decoded from
-   `latest-mac.yml`).
+1. `scripts/check-upstream.sh` reports the new version and the file list of the live feed.
+2. Update `VERSION`, and `MAC_ZIP_SHA512` in [`scripts/versions.env`](scripts/versions.env)
+   (SHA-512 of the x64 zip, base64-decoded from `latest-mac.yml`).
 3. If the bundled Electron version changed (`Frameworks/Electron Framework.framework/Versions/A/
-   Resources/Info.plist`), update `ELECTRON_VERSION`; `node-pty` is recompiled automatically.
-   Re-check that the patch patterns in `scripts/patch-vendor.cjs` still exist — the build fails if
-   they do not, and the new window code has to be re-derived rather than ignored.
-4. Reconcile the native module versions with the new `app.asar/package.json`
+   Resources/Info.plist`), update `ELECTRON_VERSION` in the same file; `node-pty` is recompiled
+   automatically. Confirm that the patch patterns in `scripts/patch-vendor.cjs` still match: a
+   missing pattern fails the build, and the window code has to be re-derived from the new bundle.
+4. Reconcile the native module and binary versions with the new `app.asar/package.json`
    (`CANVAS_VERSION`, `CUA_DRIVER_VERSION`, `UBJS_VERSION`, `NODE_PTY_VERSION`,
-   `AGENT_BROWSER_VERSION`, `UV_VERSION`).
+   `AGENT_BROWSER_VERSION`, `UV_VERSION`), all in `scripts/versions.env`.
 5. Diff the new `Resources/` tree against the previous one. Stage 6 copies `agent-plugins`,
    `agent-skills`, `cli`, `cua`, `en.lproj`, `tray*.png`, `app-update.yml` and the OAuth artwork;
-   entries upstream adds, renames or drops (4.1.1 dropped `connectors/` and `home-scenarios/` and
-   added the OAuth PNGs) must be reconciled with that list, or `cp -a` aborts the build.
-6. Rebuild; the bundled smoke test must pass, then repeat the interactive checks in
-   [`docs/verification.md`](docs/verification.md).
+   entries that upstream adds, renames or drops (4.1.1 dropped `connectors/` and `home-scenarios/`
+   and added the OAuth PNGs) have to be reconciled with that list, otherwise `cp -a` aborts the build.
+6. Add an entry for `<version>-1` to [`CHANGELOG.md`](CHANGELOG.md).
+7. Rebuild; the bundled smoke test must pass. Then run `scripts/check-docs.sh` and repeat the
+   interactive checks in [`docs/verification.md`](docs/verification.md).
 
-New native dependencies (`.node`, `.so`) must be matched with an official `linux-x64-gnu`
-variant, otherwise the dependent feature fails at runtime.
+New native dependencies (`.node`, `.so`) require the matching official `linux-x64-gnu` variant,
+otherwise the dependent feature fails at runtime.
 
 ## Documentation
 
+- [`docs/README.md`](docs/README.md) — documentation index, translation rules and screenshot
+  regeneration
+- [`CHANGELOG.md`](CHANGELOG.md) — repository changes per packaging revision
 - [`docs/design.md`](docs/design.md) — upstream package analysis, substitution rationale, asar
   and ABI decisions, packaging layout
 - [`docs/verification.md`](docs/verification.md) — verification procedure, observed results,

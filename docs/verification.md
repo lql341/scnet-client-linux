@@ -1,9 +1,9 @@
 # Verification
 
 What was executed, on which system, and what the result was. Anything not listed here was not
-verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session, a single
-1200×741-capable display, and no root access during testing (the `.deb` was unpacked with
-`dpkg-deb -x` rather than installed with `apt`).
+verified. The reference system is Debian 13 (trixie) x86-64 with an X11 session and a
+1200×768-capable display; no root access was available, so the `.deb` was unpacked with
+`dpkg-deb -x` and not installed with `apt`.
 
 ## 0. Version coverage
 
@@ -97,7 +97,7 @@ terminated first.
 
 | Observation | Result |
 | --- | --- |
-| Window appears | title 「计算服务」, class `scnet-client`, 1200×741 |
+| Window appears | title 「计算服务」, class `scnet-client`, 1200×768; the screenshot in `docs/assets/` is cropped to the client area, 1200×741 |
 | Time to first window | 5–20 s on first launch |
 | Renderer content | sign-in form renders; with a session present the dashboard renders |
 | Sign-in window controls | one minimize and one close glyph at the top right, no duplicates |
@@ -177,7 +177,7 @@ about five minutes on the reference system.
 - computer use (CUA): the library loads, but pointer and screenshot actions were not exercised,
   and the driver needs X11/Wayland access plus `libXtst`;
 - auto-update: the feed carries no Linux artifacts and `electron-updater` cannot replace this
-  layout, so the feature is inert;
+  layout, so the feature has no effect;
 - tray icon: needs `libayatana-appindicator3`/`libappindicator3`, not installed here;
 - multiple instances sharing one configuration directory: a windowless start was observed
   occasionally during testing, caused by the single-instance lock combined with session restore.
