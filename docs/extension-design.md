@@ -107,8 +107,9 @@ Running uploads and downloads with direction, size and progress, read from `tran
 
 ### 4.5 Entry points and console links
 
-The panel opens from the account menu that appears under the avatar, next to 我的资源 and 费用中心:
-用量与账单, 传输任务, 连接诊断 and 主题. The menu is rendered by the vendor on every open and its styles
+The extension takes a place in the application's own navigation, after 高性能计算, and renders a
+full-height view aligned with the content area. The account menu under the avatar carries the same
+four shortcuts — 用量与账单, 传输任务, 连接诊断 and 主题 — into that view. The menu is rendered by the vendor on every open and its styles
 are scoped with a `data-v` attribute, so the injected items copy that attribute from an existing item
 rather than hard-coding a hash; a `MutationObserver` inserts them once per opening, before 退出登录.
 

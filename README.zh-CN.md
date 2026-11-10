@@ -5,7 +5,7 @@
 将官方 SCNet 客户端（应用名「计算服务」，bundle identifier `com.sugon.sacp`）的 macOS
 Electron 发行包，转换为可运行的 Linux x64 构建流水线。
 
-当前目标版本：**4.1.1**（Electron **44.7.0**），见 [`VERSION`](VERSION)。打包修订号 **2**，
+当前目标版本：**4.1.2**（Electron **44.7.0**），见 [`VERSION`](VERSION)。打包修订号 **2**，
 见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ```bash
@@ -83,14 +83,14 @@ build/linux/                                便携目录
     ├── bin/uv                              uv 0.9.9（静态）
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.1-5_amd64.deb
+scnet-client_4.1.2-1_amd64.deb
 ```
 
 ### 运行
 
 ```bash
 build/linux/launcher.sh                          # 便携运行
-sudo apt install ./scnet-client_4.1.1-5_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
+sudo apt install ./scnet-client_4.1.2-1_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
 ```
 
 启动器在系统能够提供 Chromium 沙箱时保留沙箱——setuid-root 的 `chrome-sandbox`，或非特权

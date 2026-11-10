@@ -106,30 +106,48 @@
 
 /* ---------------------------------------------------------------- our panel */
 
-.sx-root {
+.sx-view {
   position: fixed;
-  left: 12px;
-  bottom: 64px;
-  z-index: 2147483000;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 248px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main, #fff);
+  z-index: 1500;   /* above the vendor content surfaces, below Element Plus poppers */
   font: 13px/1.5 -apple-system, 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
   color: var(--text, #1a1c1f);
-  -webkit-app-region: no-drag;
 }
 
-.sx-head {
+.sx-view-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border-subtle, #ececec);
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  height: 46px;
+  border-bottom: 1px solid var(--border-main, #1a1c1f14);
+  background: var(--bg-surface, #fff);
+}
+
+.sx-view-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sx-nav-active {
+  background: var(--fill-selected, #1a1c1f0c);
+  color: var(--text, #1a1c1f);
 }
 
 .sx-close {
+  margin-left: auto;
   border: 0;
   background: transparent;
   color: var(--text-tertiary, #6b6f76);
   font-size: 16px;
   line-height: 1;
-  padding: 8px 10px;
+  padding: 6px 8px;
   cursor: default;
 }
 
@@ -137,25 +155,9 @@
   color: var(--text, #1a1c1f);
 }
 
-.sx-panel {
-  width: 520px;
-  max-height: 60vh;
-  overflow: auto;
-  background: var(--color-surface-elevated, #fff);
-  border: 1px solid var(--border-main, #1a1c1f14);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
-}
-
-:root[data-scnet-theme='claude'] .sx-panel {
-  background: #fffdf9;
-  border-color: #e5e2d9;
-}
-
 .sx-tabs {
   display: flex;
   gap: 2px;
-  padding: 8px 8px 0;
 }
 
 .sx-tab {
@@ -174,7 +176,9 @@
 }
 
 .sx-body {
-  padding: 12px;
+  padding: 16px 20px;
+  overflow: auto;
+  flex: 1 1 auto;
 }
 
 .sx-table {

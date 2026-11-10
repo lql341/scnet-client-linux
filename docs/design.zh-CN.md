@@ -1,7 +1,7 @@
 # 设计说明
 
-对厂商发行包的分析，以及每项替换的依据。所有观察均针对 SCNet 桌面客户端 **4.1.1** 的
-macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码片段；未经证实的内容在
+对厂商发行包的分析，以及每项替换的依据。所有观察均针对 SCNet 桌面客户端 **4.1.2** 的
+macOS x64 发行包（`SCNet-4.1.2-x64.zip`）。文中引用的是实际代码片段；未经证实的内容在
 [`verification.zh-CN.md`](verification.zh-CN.md) 中标注为未验证。
 
 ## 1. 分发方式
@@ -13,14 +13,14 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
 | macOS | `https://dlcdn.scnet.cn/client/mac/latest-mac.yml` |
 | Windows | `https://dlcdn.scnet.cn/client/win/latest.yml` |
 
-4.1.1 的 `latest-mac.yml` 列出四个产物，均带 base64 编码的 SHA-512：
+4.1.2 的 `latest-mac.yml` 列出四个产物，均带 base64 编码的 SHA-512：
 
 | 文件 | 大小（字节） |
 | --- | --- |
-| `SCNet-4.1.1-x64.zip` | 257,627,218 |
-| `SCNet-4.1.1-arm64.zip` | 247,902,758 |
-| `SCNet-4.1.1-x64.dmg` | 258,195,702 |
-| `SCNet-4.1.1-arm64.dmg` | 248,542,343 |
+| `SCNet-4.1.2-x64.zip` | 273,751,227 |
+| `SCNet-4.1.2-arm64.zip` | 264,026,567 |
+| `SCNet-4.1.2-x64.dmg` | 274,313,723 |
+| `SCNet-4.1.2-arm64.dmg` | 263,318,349 |
 
 清单中没有 Linux 条目，下载页也只标注 macOS 13+、Windows 10+ 与 Android。
 
@@ -34,7 +34,7 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
 
 ```text
 计算服务.app/Contents/
-├── Info.plist                    CFBundleIdentifier com.sugon.sacp，4.1.1，LSMinimumSystemVersion 13.0
+├── Info.plist                    CFBundleIdentifier com.sugon.sacp，4.1.2，LSMinimumSystemVersion 13.0
 ├── MacOS/计算服务                Electron 启动桩
 ├── Frameworks/Electron Framework.framework    CFBundleVersion 44.7.0
 └── Resources/
@@ -55,7 +55,7 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
 `dist/`（React 渲染层资源），以及运行时依赖：
 
 ```json
-{ "name": "scnet-client", "version": "4.1.1",
+{ "name": "scnet-client", "version": "4.1.2",
   "main": "dist-electron/main/index.js", "type": "module",
   "packageManager": "bun@1.4.0",
   "engines": { "bun": ">=1.4.0", "node": ">=24.18.1" },
@@ -67,7 +67,7 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
   "patchedDependencies": { "@earendil-works/pi-ai@1.1.0": "…",
                           "@earendil-works/pi-coding-agent@1.1.0": "…",
                           "exceljs@4.4.0": "…" },
-  "scnetBuild": { "commit": "c5b623c", "channel": "release", "baseVersion": "4.1.1" } }
+  "scnetBuild": { "commit": "edb3341", "channel": "release", "baseVersion": "4.1.2" } }
 ```
 
 由此可得两个对本仓库有决定作用的事实：
@@ -77,11 +77,12 @@ macOS x64 发行包（`SCNet-4.1.1-x64.zip`）。文中引用的是实际代码�
   `app.asar`，不进行重建。
 
 依赖块自 4.1.0 起未变：固定的原生包版本（4.3 节）、`node-pty` 与两个独立二进制（4.4、4.5 节）
-全部沿用，因此 4.1.1 的升级只需改版本号与校验和。
+全部沿用，因此 4.1.2 的升级只需改版本号与校验和。归档本身体积增加 16 MB；资源目录、两个 HTML 入口
+与扩展依赖的宿主操作均未变化。
 
 ### 内置资源目录的变化
 
-4.1.1 去掉了 4.1.0 中的两个顶层 `Resources/` 目录，并新增三个文件：
+4.1.1 去掉了 4.1.0 中的两个顶层 `Resources/` 目录，并新增三个文件，4.1.2 沿用该布局：
 
 | 路径 | 4.1.0 | 4.1.1 |
 | --- | --- | --- |

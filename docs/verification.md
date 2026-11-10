@@ -189,7 +189,9 @@ about five minutes on the reference system.
 ## 8. Extension panel
 
 Executed on the 4.1.1-3 package, unpacked with `dpkg-deb -x`, against a copy of an existing profile,
-driven through the DevTools protocol.
+driven through the DevTools protocol. The 4.1.2 archive was compared against 4.1.1 before the bump:
+same Electron, same pinned natives, same resource tree, same host operations and no `usage.centers`
+method; the extension view was verified on the 4.1.2 build.
 
 | Check | Result |
 | --- | --- |
@@ -199,6 +201,7 @@ driven through the DevTools protocol.
 | Billing | 20 rows of 612, paging wired, no error; the request takes roughly nine seconds against the live service |
 | Transfers | `transfers.list` and `file-tasks.list` both resolve; empty state rendered when nothing is in progress |
 | Connectivity | `api.scnet.cn` 187 ms, `www.scnet.cn` 81 ms, `dlcdn.scnet.cn` 37 ms, all reachable |
+| Sidebar entry | 资源用量 appears as the sixth navigation item, after 高性能计算; the view aligns to the content area (248–1200 px of a 1200 px window), sits above the vendor content and renders the five tabs |
 | Account menu | four items injected before 退出登录 with the vendor's scoped attribute copied at runtime; clicking 用量与账单 opens the panel with the usage tab and 12 rows |
 | Console entries | six routes rendered; one invocation (`fee-summary`) resolved through `auth.open-authenticated-route` |
 | Diagnostics | 12,270-character report with platform, version, theme and the log tail |

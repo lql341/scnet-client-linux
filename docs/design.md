@@ -1,8 +1,8 @@
 # Design
 
 Analysis of the vendor package and the reasoning behind each substitution. All observations refer
-to SCNet desktop client **4.1.1** as published for macOS x64
-(`SCNet-4.1.1-x64.zip`). File-level evidence is quoted inline; conclusions that were not verified
+to SCNet desktop client **4.1.2** as published for macOS x64
+(`SCNet-4.1.2-x64.zip`). File-level evidence is quoted inline; conclusions that were not verified
 are marked as such in [`verification.md`](verification.md).
 
 ## 1. Distribution
@@ -14,14 +14,14 @@ The client is distributed through an `electron-updater` generic feed:
 | macOS | `https://dlcdn.scnet.cn/client/mac/latest-mac.yml` |
 | Windows | `https://dlcdn.scnet.cn/client/win/latest.yml` |
 
-`latest-mac.yml` for 4.1.1 lists four artifacts, all with base64-encoded SHA-512:
+`latest-mac.yml` for 4.1.2 lists four artifacts, all with base64-encoded SHA-512:
 
 | File | Size (bytes) |
 | --- | --- |
-| `SCNet-4.1.1-x64.zip` | 257,627,218 |
-| `SCNet-4.1.1-arm64.zip` | 247,902,758 |
-| `SCNet-4.1.1-x64.dmg` | 258,195,702 |
-| `SCNet-4.1.1-arm64.dmg` | 248,542,343 |
+| `SCNet-4.1.2-x64.zip` | 273,751,227 |
+| `SCNet-4.1.2-arm64.zip` | 264,026,567 |
+| `SCNet-4.1.2-x64.dmg` | 274,313,723 |
+| `SCNet-4.1.2-arm64.dmg` | 263,318,349 |
 
 There is no Linux entry, and the download page advertises macOS 13+, Windows 10+ and Android only.
 
@@ -36,7 +36,7 @@ file matches the SHA-512 in the manifest byte for byte.
 
 ```text
 计算服务.app/Contents/
-├── Info.plist                    CFBundleIdentifier com.sugon.sacp, 4.1.1, LSMinimumSystemVersion 13.0
+├── Info.plist                    CFBundleIdentifier com.sugon.sacp, 4.1.2, LSMinimumSystemVersion 13.0
 ├── MacOS/计算服务                Electron launcher stub
 ├── Frameworks/Electron Framework.framework    CFBundleVersion 44.7.0
 └── Resources/
@@ -57,7 +57,7 @@ file matches the SHA-512 in the manifest byte for byte.
 not obfuscated), `dist/` (React renderer assets), and the runtime dependencies:
 
 ```json
-{ "name": "scnet-client", "version": "4.1.1",
+{ "name": "scnet-client", "version": "4.1.2",
   "main": "dist-electron/main/index.js", "type": "module",
   "packageManager": "bun@1.4.0",
   "engines": { "bun": ">=1.4.0", "node": ">=24.18.1" },
@@ -69,7 +69,7 @@ not obfuscated), `dist/` (React renderer assets), and the runtime dependencies:
   "patchedDependencies": { "@earendil-works/pi-ai@1.1.0": "…",
                           "@earendil-works/pi-coding-agent@1.1.0": "…",
                           "exceljs@4.4.0": "…" },
-  "scnetBuild": { "commit": "c5b623c", "channel": "release", "baseVersion": "4.1.1" } }
+  "scnetBuild": { "commit": "edb3341", "channel": "release", "baseVersion": "4.1.2" } }
 ```
 
 Two consequences matter for this repository:
@@ -80,12 +80,14 @@ Two consequences matter for this repository:
   to the shipped bundle. The vendor `app.asar` is therefore reused rather than reconstructed.
 
 The dependency block is unchanged since 4.1.0: the pinned native versions (section 4.3), `node-pty`
-and the two standalone binaries (sections 4.4, 4.5) all carry over, so the 4.1.1 bump is a version
-and checksum change only.
+and the two standalone binaries (sections 4.4, 4.5) all carry over, so the 4.1.2 bump is a version
+and checksum change only. The archive itself grows by 16 MB; the resource tree, the two HTML entry
+points and the host operations the extension depends on are identical.
 
 ### Bundled resource directories
 
-4.1.1 dropped two top-level `Resources/` trees that 4.1.0 shipped and added three files:
+4.1.1 dropped two top-level `Resources/` trees that 4.1.0 shipped and added three files, and
+4.1.2 keeps that layout:
 
 | Path | 4.1.0 | 4.1.1 |
 | --- | --- | --- |

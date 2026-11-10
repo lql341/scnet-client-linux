@@ -552,33 +552,41 @@
 
     mount: function () {
       var self = this;
-      var root = el('div', { id: 'scnet-ext', class: 'sx-root', hidden: 'hidden' });
-      var panel = el('div', { class: 'sx-panel' });
+      var root = el('div', { id: 'scnet-ext', class: 'sx-view', hidden: 'hidden' });
 
-      var head = el('div', { class: 'sx-head' });
+      var head = el('div', { class: 'sx-view-head' });
+      head.appendChild(el('span', { class: 'sx-view-title', text: '资源用量' }));
       var tabs = el('div', { class: 'sx-tabs' });
       [['用量', 'usage'], ['账单', 'billing'], ['传输', 'transfers'], ['连接', 'connectivity'], ['设置', 'settings']]
         .forEach(function (pair) { tabs.appendChild(tab(pair[0], pair[1])); });
       head.appendChild(tabs);
-      var close = el('button', { class: 'sx-close', type: 'button', title: '关闭', text: '×' });
+      var close = el('button', { class: 'sx-close', type: 'button', title: '返回', text: '×' });
       close.addEventListener('click', function () { self.hide(); });
       head.appendChild(close);
-      panel.appendChild(head);
+      root.appendChild(head);
 
       var body = el('div', { class: 'sx-body' });
-      panel.appendChild(body);
-      root.appendChild(panel);
+      root.appendChild(body);
       document.body.appendChild(root);
       this.root = root;
-      this.panel = panel;
       this.body = body;
 
-      panel.addEventListener('click', function (event) {
+      root.addEventListener('click', function (event) {
         var target = event.target;
         if (target && target.dataset && target.dataset.tab) self.show(target.dataset.tab);
       });
 
-      if (settings.panel) this.show(settings.panel);
+      window.addEventListener('resize', function () {
+        if (self.root && !self.root.hasAttribute('hidden')) self.place();
+      });
+    },
+
+    /** Align the view with the content area, to the right of the sidebar. */
+    place: function () {
+      var anchor = document.querySelector('.sidebar-footer') || document.querySelector('.sidebar-primary-menu');
+      if (!anchor) return;
+      var box = anchor.getBoundingClientRect();
+      this.root.style.left = Math.round(box.right) + 'px';
     },
 
     open: function (name) {
@@ -587,13 +595,23 @@
 
     hide: function () {
       this.root.setAttribute('hidden', 'hidden');
+      var nav = document.querySelector('[data-scnet-ext="nav"]');
+      if (nav) nav.classList.remove('sx-nav-active');
+      var again = document.querySelector('[data-scnet-ext="nav"]');
+      if (again) again.setAttribute('aria-current', 'false');
     },
 
     show: function (name) {
       settings.panel = name;
       writeSetting(STORE.panel, name);
       this.root.removeAttribute('hidden');
-      Array.prototype.forEach.call(this.panel.querySelectorAll('[data-tab]'), function (node) {
+      this.place();
+      var navButton = document.querySelector('[data-scnet-ext="nav"]');
+      if (navButton) {
+        navButton.classList.add('sx-nav-active');
+        navButton.setAttribute('aria-current', 'true');
+      }
+      Array.prototype.forEach.call(this.root.querySelectorAll('[data-tab]'), function (node) {
         node.classList.toggle('sx-active', node.dataset.tab === name);
       });
       if (name === 'usage') { usageModule.refresh(); this.renderUsage(); }
@@ -823,6 +841,67 @@
     return node;
   }
 
+  // ------------------------------------------------------------- sidebar entry
+
+  /*
+   * The extension takes a place in the application's own navigation: a sixth
+   * item after 高性能计算, opening a full-height view in the content area rather
+   * than a floating panel. The button copies the vendor's scoped data-v
+   * attribute so the vendor stylesheet applies.
+   */
+  var navModule = {
+    id: 'nav',
+    label: '资源用量',
+    icon: 'M3 3v18h18M7 15v3M12 9v9M17 5v13',
+
+    start: function () {
+      var self = this;
+      this.inject();
+      new MutationObserver(function () { self.inject(); })
+        .observe(document.body, { childList: true, subtree: true });
+    },
+
+    inject: function () {
+      var menu = document.querySelector('nav.sidebar-primary-menu');
+      if (!menu || menu.querySelector('[data-scnet-ext="nav"]')) return;
+      var template = menu.querySelector('button.sidebar-nav-button');
+      if (!template) return;
+
+      var scope = null;
+      for (var i = 0; i < template.attributes.length; i += 1) {
+        var attr = template.attributes[i];
+        if (attr.name.indexOf('data-v-') === 0) { scope = { name: attr.name, value: attr.value }; break; }
+      }
+
+      var button = el('button', { class: 'sidebar-nav-button', type: 'button' });
+      button.setAttribute('data-scnet-ext', 'nav');
+      if (scope) button.setAttribute(scope.name, scope.value);
+
+      var iconWrap = el('span', { class: 'sidebar-nav-button__icon' });
+      if (scope) iconWrap.setAttribute(scope.name, scope.value);
+      iconWrap.appendChild(svgIcon(this.icon, scope));
+      button.appendChild(iconWrap);
+
+      var label = el('span', { class: 'sidebar-nav-button__label', text: this.label });
+      if (scope) label.setAttribute(scope.name, scope.value);
+      button.appendChild(label);
+
+      button.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        board.open(settings.panel || 'usage');
+      });
+
+      menu.appendChild(button);
+
+      // A click on any vendor entry leaves the extension view.
+      menu.addEventListener('click', function (event) {
+        if (event.target && event.target.closest && event.target.closest('[data-scnet-ext="nav"]')) return;
+        board.hide();
+      });
+    },
+  };
+
   // ------------------------------------------------------------- account menu
 
   /*
@@ -934,6 +1013,7 @@
       }
       board.mount();
       board.hide();
+      navModule.start();
       menuModule.start();
       themeModule.apply(settings.theme);
       usageModule.refresh();
@@ -952,6 +1032,7 @@
     connectivity: connectivityModule,
     diagnostics: diagnosticsModule,
     menu: menuModule,
+    nav: navModule,
     openRoute: openRoute,
     theme: themeModule,
     settings: settings,

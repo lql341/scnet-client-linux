@@ -5,6 +5,22 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-1
+
+### Target
+
+- Upstream 4.1.2 (`SCNet-4.1.2-x64.zip`, 273,751,227 bytes, SHA-512 verified). Electron remains
+  44.7.0 and every pinned native package is unchanged, so nothing was rebuilt for a new ABI. The
+  archive grows by 16 MB; the resource tree, the two HTML entry points and every host operation the
+  extension uses are unchanged, and no `usage.centers` method was added.
+
+### Changed
+
+- The extension no longer floats over the content. It takes a place in the sidebar navigation, after
+  高性能计算, and opens a full-height view aligned with the content area, with its own title bar and
+  tabs. Clicking any vendor navigation entry returns to the application.
+- The account menu entries remain as shortcuts into the same view.
+
 ## 4.1.1-5
 
 ### Changed
