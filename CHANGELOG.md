@@ -5,6 +5,16 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.1-4
+
+### Fixed
+
+- The desktop entry shows `SCNet 计算服务` in every locale. The previous entry carried
+  `Name[en]=SCNet Client`, and a session whose `LANGUAGE` is `en_US` — the default on the test
+  machines — displayed `SCNet Client`, which does not match the window title.
+- Icon sizes up to 48 px are cut to the red wordmark and scaled to fill the canvas. The vendor
+  artwork is a white tile with a small wordmark, which read as a blank square in menus and panels.
+
 ## 4.1.1-3
 
 ### Added

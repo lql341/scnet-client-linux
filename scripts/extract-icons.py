@@ -4,6 +4,10 @@ sizes a Linux icon theme expects.
 
 usage: extract-icons.py <icon.icns> <output-dir>
 
+Sizes up to 48 px are cut to the red wordmark and scaled up to fill the canvas: the
+icon as shipped is a white tile with a small wordmark, which reads as a blank square
+in a menu or a panel. Larger sizes keep the tile artwork untouched.
+
 Writes <output-dir>/<size>.png for every size in SIZES. Sizes that exist in the
 container are written verbatim; the rest are produced by a premultiplied box
 filter from the smallest larger representation.
@@ -100,6 +104,50 @@ def decode_png(data):
     return width, height, pixels
 
 
+SMALL_LIMIT = 48
+INK_PADDING = 0.10
+
+
+def ink_crop(width, height, pixels, padding=INK_PADDING):
+    """Bounding box of the red wordmark, with padding, or None when not found.
+
+    The tile is white with a soft shadow, so a luminance threshold selects the
+    tile rather than the mark; the red channel separation does.
+    """
+    left, top, right, bottom = width, height, -1, -1
+    for y in range(height):
+        row = y * width * 4
+        for x in range(width):
+            offset = row + x * 4
+            r, g, b, a = pixels[offset:offset + 4]
+            if a > 32 and r > 100 and r - max(g, b) > 30:
+                if x < left:
+                    left = x
+                if x > right:
+                    right = x
+                if y < top:
+                    top = y
+                if y > bottom:
+                    bottom = y
+    if right < 0 or bottom < 0:
+        return None
+    box_w, box_h = right - left + 1, bottom - top + 1
+    pad = int(max(box_w, box_h) * padding)
+    return (max(0, left - pad), max(0, top - pad),
+            min(width, right + 1 + pad), min(height, bottom + 1 + pad))
+
+
+def crop_rgba(width, height, pixels, box):
+    left, top, right, bottom = box
+    out_w, out_h = right - left, bottom - top
+    out = bytearray(out_w * out_h * 4)
+    for y in range(out_h):
+        src_start = ((top + y) * width + left) * 4
+        dst_start = y * out_w * 4
+        out[dst_start:dst_start + out_w * 4] = pixels[src_start:src_start + out_w * 4]
+    return out_w, out_h, out
+
+
 def resize_box(src_w, src_h, src, dst_w, dst_h):
     """Premultiplied box filter; adequate for icon downscaling."""
     out = bytearray(dst_w * dst_h * 4)
@@ -159,8 +207,17 @@ def main():
             decoded[size] = decode_png(native[size])
         return decoded[size]
 
+    largest = max(native)
+
     for size in SIZES:
-        if size in native:
+        if size <= SMALL_LIMIT:
+            width, height, pixels = image(largest)
+            box = ink_crop(width, height, pixels)
+            if box:
+                width, height, pixels = crop_rgba(width, height, pixels, box)
+            png = encode_png(size, size, resize_box(width, height, pixels, size, size))
+            origin = f'wordmark cropped from {largest}'
+        elif size in native:
             png = native[size]
             origin = 'native'
         else:
