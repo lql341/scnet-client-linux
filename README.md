@@ -33,7 +33,7 @@ Out of scope:
 - modification of the vendor's JavaScript: every vendor file is used as shipped, the only additions
   being one `<script>` tag in the two HTML entry points and the file it loads;
 - reimplementation of application features;
-- support commitments. This is not an official distribution.
+- support commitments. The build serves internal testing during the Linux port.
 
 The repository tree contains no vendor binaries and no build outputs. The vendor archive is
 fetched from the vendor CDN at build time and verified against the SHA-512 published in
@@ -246,7 +246,7 @@ sizes, and the same behaviour after unpacking the `.deb`. Procedure, commands an
 | Tiling window managers, fractional scaling | Not verified; the maximize control relies on how the window manager treats a frameless window |
 | Multiple instances in one profile | Occasional windowless start due to the single-instance lock and session restore; terminate remaining instances and retry |
 | MCP OAuth (third-party servers) | The consent flow uses a `127.0.0.1` loopback redirect and completes, but the vendor only closes and raises the browser tab on macOS (AppleScript) and Windows (`oauth-return.ps1`); on Linux the tab stays open. First-party connectors authorise with the SCNet session and need no OAuth |
-| Vendor support | None; not an official distribution |
+| Support | Internal test build; no support commitment |
 
 ## Updating to a new upstream release
 
@@ -281,12 +281,12 @@ otherwise the dependent feature fails at runtime.
 - [`docs/verification.md`](docs/verification.md) — verification procedure, observed results,
   remaining unknowns
 
-## Disclaimer
+## Status
 
-This project is not affiliated with, endorsed by, or supported by 曙光智算 or the National
-Supercomputing Internet (SCNet). No vendor code or binaries are redistributed in the repository;
-build outputs are generated locally from the vendor's own distribution. Compliance with the
-vendor's terms is the responsibility of whoever builds or installs the result.
+Internal evaluation build for the Linux port of the desktop client, used during the test phase.
+The repository carries no vendor binaries: build outputs are generated locally from the vendor's
+own distribution. Distribution of those outputs outside the organisation requires authorisation,
+and compliance with the vendor's terms remains with whoever builds or installs the result.
 
 ## License
 
