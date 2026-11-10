@@ -1,324 +1,306 @@
 /*
- * Theme tokens and panel styles for the SCNet client extensions.
+ * Appearance: palettes, text size and the settings dialog.
  *
- * Themes override the vendor's own custom properties, which the renderer already
- * uses for surfaces, text, borders, accent and radii. When the vendor renames a
- * token, the theme stops applying to that surface and the vendor value stands,
- * so a redesign degrades the theme rather than breaking the layout.
+ * The renderer already drives its colors from custom properties, so a palette is
+ * a set of token overrides on :root. Two tokens are written as inline styles by
+ * the renderer at runtime (--color-accent, --color-accent-hover), which only an
+ * !important declaration can replace; the rest is left to the cascade.
  *
- * The attribute is set on <html> by the injector's head bootstrap (first paint)
- * and by extensions/main.js when the user switches themes.
+ * Text size scales the font tokens the renderer uses, through one multiplier.
  */
+
+/* ------------------------------------------------------------------ palettes */
 
 :root[data-scnet-theme='paper'] {
   --color-surface-under: #fbfaf7;
   --color-surface: #ffffff;
   --color-surface-muted: #f4f2ed;
   --color-surface-elevated: #ffffff;
+  --color-ink: #1c1b1a;
   --text: #1c1b1a;
   --text-secondary: #45423d;
   --text-tertiary: #6b6862;
-  --text-link: #2f6feb;
-  --text-link-hover: #1f57c3;
-  --color-accent: #2f6feb;
-  --color-accent-hover: #1f57c3;
+  --color-accent: #2f6feb !important;
+  --color-accent-hover: #1f57c3 !important;
   --border-main: #e4e1da;
   --border-subtle: #ece9e2;
-  --border-light: #f1eee8;
   --border-heavy: #d5d1c7;
-  --border-focus: #2f6feb;
   --button-neutral-bg: #f1eee8;
   --button-neutral-bg-hover: #e8e4dc;
   --button-neutral-text: #1c1b1a;
 }
 
-:root[data-scnet-theme='claude'] {
+:root[data-scnet-theme='sand'] {
   --color-surface-under: #faf9f5;
   --color-surface: #f0eee6;
   --color-surface-muted: #f5f4ee;
-  --color-surface-elevated: #ffffff;
+  --color-surface-elevated: #fffdf9;
+  --color-ink: #141413;
   --text: #141413;
   --text-secondary: #3d3b36;
   --text-tertiary: #6c6a64;
-  --text-link: #b85c3f;
-  --text-link-hover: #9d4a30;
-  --color-accent: #d97757;
-  --color-accent-hover: #c4653f;
-  --color-brand-scnet: #d97757;
+  --color-accent: #d97757 !important;
+  --color-accent-hover: #c4653f !important;
+  --color-brand-scnet: #d97757 !important;
   --border-main: #e5e2d9;
   --border-subtle: #eeece4;
-  --border-light: #f3f1ea;
   --border-heavy: #d8d4c8;
-  --border-focus: #d97757;
   --button-neutral-bg: #f0eee6;
   --button-neutral-bg-hover: #e8e5da;
   --button-neutral-text: #141413;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
 }
 
-/*
- * The renderer writes the accent and font tokens as inline styles on <html> and
- * <body> at runtime (theme plumbing in the vendor code), so a stylesheet rule of
- * normal weight cannot replace them. Declaring the accent with !important on both
- * elements is the only way for a theme to take effect; the remaining tokens are
- * left to the cascade so the vendor can keep updating them.
- */
-:root[data-scnet-theme='paper'],
-:root[data-scnet-theme='paper'] body {
-  --color-accent: #2f6feb !important;
-  --color-accent-hover: #1f57c3 !important;
+:root[data-scnet-theme='forest'] {
+  --color-surface-under: #f7f8f6;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef2ee;
+  --color-surface-elevated: #ffffff;
+  --color-ink: #17201a;
+  --text: #17201a;
+  --text-secondary: #3c4a40;
+  --text-tertiary: #66756b;
+  --color-accent: #2f7d54 !important;
+  --color-accent-hover: #256542 !important;
+  --border-main: #dde3dd;
+  --border-subtle: #e8ece7;
+  --border-heavy: #cbd4cc;
+  --button-neutral-bg: #eef2ee;
+  --button-neutral-bg-hover: #e3eae4;
+  --button-neutral-text: #17201a;
 }
 
+:root[data-scnet-theme='indigo'] {
+  --color-surface-under: #f8f8fc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f1f8;
+  --color-surface-elevated: #ffffff;
+  --color-ink: #191a24;
+  --text: #191a24;
+  --text-secondary: #3f4257;
+  --text-tertiary: #6a6d84;
+  --color-accent: #4a54c8 !important;
+  --color-accent-hover: #3b45ad !important;
+  --border-main: #e0e1ee;
+  --border-subtle: #ebecf5;
+  --border-heavy: #ced0e2;
+  --button-neutral-bg: #f0f1f8;
+  --button-neutral-bg-hover: #e6e7f2;
+  --button-neutral-text: #191a24;
+}
+
+:root[data-scnet-theme='ink'] {
+  --color-surface-under: #17171a;
+  --color-surface: #1f1f23;
+  --color-surface-muted: #26262b;
+  --color-surface-elevated: #26262b;
+  --color-ink: #f2f2f0;
+  --text: #f2f2f0;
+  --text-secondary: #cdcdc8;
+  --text-tertiary: #9d9d97;
+  --color-accent: #ffb454 !important;
+  --color-accent-hover: #ffc776 !important;
+  --border-main: #ffffff1f;
+  --border-subtle: #ffffff14;
+  --border-heavy: #ffffff33;
+  --button-neutral-bg: #2c2c32;
+  --button-neutral-bg-hover: #35353c;
+  --button-neutral-text: #f2f2f0;
+}
+
+/* Dark variants for the light palettes, keyed off the vendor's own class. */
 :root[data-scnet-theme='paper']:is(.dark),
-:root[data-scnet-theme='paper']:is(.dark) body {
+:root[data-scnet-theme='paper']:is(.dark) body,
+:root[data-scnet-theme='sand']:is(.dark),
+:root[data-scnet-theme='sand']:is(.dark) body,
+:root[data-scnet-theme='forest']:is(.dark),
+:root[data-scnet-theme='forest']:is(.dark) body,
+:root[data-scnet-theme='indigo']:is(.dark),
+:root[data-scnet-theme='indigo']:is(.dark) body {
   --color-surface-under: #14140f;
   --color-surface: #1b1b16;
   --color-surface-muted: #232320;
   --color-surface-elevated: #232320;
-  --color-accent: #4e8ef7 !important;
-  --color-accent-hover: #7aa9fa !important;
-  --color-ink: #f3f2ee;
-  --text: #f3f2ee;
-  --text-secondary: #cfcdc6;
-  --text-tertiary: #a3a099;
-  --button-neutral-bg: #2a2a24;
-  --button-neutral-bg-hover: #34342c;
-  --button-neutral-text: #f3f2ee;
-  --border-main: #ffffff1a;
-  --border-subtle: #ffffff12;
-  --border-heavy: #ffffff29;
-}
-
-:root[data-scnet-theme='claude']:is(.dark),
-:root[data-scnet-theme='claude']:is(.dark) body {
-  --color-surface-under: #1a1917;
-  --color-surface: #22201d;
-  --color-surface-muted: #2a2824;
-  --color-surface-elevated: #2a2824;
-  --color-accent: #e08a68 !important;
-  --color-accent-hover: #eda27f !important;
-  --color-ink: #f2efe6;
-  --text: #f2efe6;
-  --text-secondary: #d3cfc3;
-  --text-tertiary: #a8a49a;
-  --button-neutral-bg: #2f2c28;
-  --button-neutral-bg-hover: #3a362f;
-  --button-neutral-text: #f2efe6;
+  --color-ink: #f2f0ea;
+  --text: #f2f0ea;
+  --text-secondary: #d1cec6;
+  --text-tertiary: #a5a29a;
   --border-main: #ffffff1a;
   --border-subtle: #ffffff12;
   --border-heavy: #ffffff2b;
+  --button-neutral-bg: #2a2a24;
+  --button-neutral-bg-hover: #34342c;
+  --button-neutral-text: #f2f0ea;
 }
 
-:root[data-scnet-theme='claude'],
-:root[data-scnet-theme='claude'] body {
-  --color-accent: #d97757 !important;
-  --color-accent-hover: #c4653f !important;
-  --color-brand-scnet: #d97757 !important;
+:root[data-scnet-theme='paper']:is(.dark),
+:root[data-scnet-theme='paper']:is(.dark) body {
+  --color-accent: #4e8ef7 !important;
+  --color-accent-hover: #7aa9fa !important;
 }
 
-/* ---------------------------------------------------------------- our panel */
+:root[data-scnet-theme='sand']:is(.dark),
+:root[data-scnet-theme='sand']:is(.dark) body {
+  --color-accent: #e08a68 !important;
+  --color-accent-hover: #eda27f !important;
+}
 
-.sx-view {
+:root[data-scnet-theme='forest']:is(.dark),
+:root[data-scnet-theme='forest']:is(.dark) body {
+  --color-accent: #63b98a !important;
+  --color-accent-hover: #82cba3 !important;
+}
+
+:root[data-scnet-theme='indigo']:is(.dark),
+:root[data-scnet-theme='indigo']:is(.dark) body {
+  --color-accent: #8d95f0 !important;
+  --color-accent-hover: #a8aef5 !important;
+}
+
+/* -------------------------------------------------------------- text scaling */
+
+:root[data-scnet-size='sm'] { --sx-scale: 0.92; }
+:root[data-scnet-size='md'] { --sx-scale: 1; }
+:root[data-scnet-size='lg'] { --sx-scale: 1.08; }
+
+:root[data-scnet-size] {
+  --font-size-xs: calc(12px * var(--sx-scale));
+  --font-size-sm: calc(13px * var(--sx-scale));
+  --font-size-base: calc(14px * var(--sx-scale));
+  --font-size-lg: calc(16px * var(--sx-scale));
+  --font-size-heading-sm: calc(18px * var(--sx-scale));
+  --font-size-heading-md: calc(20px * var(--sx-scale));
+  --font-size-heading-lg: calc(24px * var(--sx-scale));
+  --font-size-display: calc(28px * var(--sx-scale));
+  --chat-font-size: calc(14px * var(--sx-scale));
+  --line-height-xs: calc(16px * var(--sx-scale));
+  --line-height-sm: calc(18px * var(--sx-scale));
+  --line-height-base: calc(21px * var(--sx-scale));
+  --line-height-lg: calc(24px * var(--sx-scale));
+}
+
+/* ------------------------------------------------------------------- dialog */
+
+.sx-overlay {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 248px;
+  inset: 0;
+  z-index: 2100000000;
   display: flex;
-  flex-direction: column;
-  background: var(--bg-main, #fff);
-  z-index: 1500;   /* above the vendor content surfaces, below Element Plus poppers */
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-overlay, #0000006b);
+  -webkit-app-region: no-drag;
   font: 13px/1.5 -apple-system, 'Noto Sans CJK SC', 'Source Han Sans SC', system-ui, sans-serif;
   color: var(--text, #1a1c1f);
 }
 
-.sx-view-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 16px;
-  height: 46px;
-  border-bottom: 1px solid var(--border-main, #1a1c1f14);
-  background: var(--bg-surface, #fff);
+.sx-dialog {
+  width: 420px;
+  background: var(--color-surface-elevated, #fff);
+  border: 1px solid var(--border-main, #1a1c1f14);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-dialog, 0 12px 32px rgba(0, 0, 0, 0.18));
+  overflow: hidden;
 }
 
-.sx-view-title {
+.sx-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+}
+
+.sx-dialog-head strong {
   font-size: 14px;
   font-weight: 600;
 }
 
-.sx-nav-active {
-  background: var(--fill-selected, #1a1c1f0c);
-  color: var(--text, #1a1c1f);
-}
-
-.sx-close {
-  margin-left: auto;
+.sx-icon-button {
   border: 0;
   background: transparent;
   color: var(--text-tertiary, #6b6f76);
   font-size: 16px;
   line-height: 1;
-  padding: 6px 8px;
-  cursor: default;
-}
-
-.sx-close:hover {
-  color: var(--text, #1a1c1f);
-}
-
-.sx-tabs {
-  display: flex;
-  gap: 2px;
-}
-
-.sx-tab {
-  border: 0;
-  background: transparent;
-  color: var(--text-tertiary, #6b6f76);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm, 8px) var(--radius-sm, 8px) 0 0;
-  cursor: default;
-  font: inherit;
-}
-
-.sx-tab.sx-active {
-  color: var(--text, #1a1c1f);
-  background: var(--color-surface-muted, #f3f3f3);
-}
-
-.sx-body {
-  padding: 16px 20px;
-  overflow: auto;
-  flex: 1 1 auto;
-}
-
-.sx-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.sx-table th,
-.sx-table td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border-subtle, #ececec);
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sx-table th {
-  color: var(--text-tertiary, #6b6f76);
-  font-weight: 500;
-}
-
-.sx-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 4px 2px 10px;
-  border-bottom: 1px solid var(--border-subtle, #ececec);
-  margin-bottom: 8px;
-}
-
-.sx-summary strong {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.sx-account {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 2px 6px;
-  border-bottom: 1px solid var(--border-subtle, #ececec);
-  margin-top: 6px;
-}
-
-.sx-tag {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill, 999px);
-  background: var(--color-surface-muted, #f3f3f3);
-  color: var(--text-tertiary, #6b6f76);
-}
-
-.sx-muted {
-  color: var(--text-tertiary, #6b6f76);
-  margin: 8px 0;
-}
-
-.sx-error {
-  color: #c0392b;
-  margin: 8px 0;
-}
-
-.sx-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.sx-wrap {
-  flex-wrap: wrap;
-}
-
-.sx-link {
-  border: 0;
-  background: transparent;
-  color: var(--text-link, #2f6feb);
-  padding: 2px 0;
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: default;
-}
-
-.sx-action {
-  border: 1px solid var(--border-main, #ddd);
-  background: var(--button-neutral-bg, #f6f6f6);
-  color: var(--text, #1a1c1f);
-  border-radius: var(--radius-sm, 8px);
-  padding: 5px 10px;
-  font: inherit;
-  cursor: default;
-}
-
-.sx-action:hover {
-  background: var(--button-neutral-bg-hover, #ededed);
-}
-
-.sx-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--border-subtle, #ececec);
-}
-
-.sx-select {
-  font: inherit;
   padding: 4px 6px;
-  border-radius: var(--radius-sm, 8px);
-  border: 1px solid var(--border-main, #ddd);
-  background: var(--color-surface-elevated, #fff);
+  cursor: default;
+}
+
+.sx-icon-button:hover {
   color: var(--text, #1a1c1f);
 }
 
-.sx-check {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-accent, #339cff);
+.sx-dialog-body {
+  padding: 14px 16px 16px;
 }
 
-.sx-foot {
-  margin-top: 12px;
-  font-size: 11px;
+.sx-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle, #ececec);
+}
+
+.sx-group:last-of-type {
+  border-bottom: 0;
+}
+
+.sx-group-label {
+  flex: 0 0 52px;
+  padding-top: 5px;
+  color: var(--text-tertiary, #6b6f76);
+}
+
+.sx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-main, #e0e0e0);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--text, #1a1c1f);
+  font: inherit;
+  cursor: default;
+}
+
+.sx-chip:hover {
+  background: var(--button-neutral-bg-hover, #f0f0f0);
+}
+
+.sx-chip.is-active {
+  border-color: var(--color-accent, #339cff);
+  box-shadow: inset 0 0 0 1px var(--color-accent, #339cff);
+}
+
+.sx-chip.is-size {
+  min-width: 52px;
+  justify-content: center;
+}
+
+.sx-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border-main, #0002);
+}
+
+.sx-swatch[data-palette='system'] { background: linear-gradient(135deg, #fff 50%, #1c1c1c 50%); }
+.sx-swatch[data-palette='paper'] { background: #fbfaf7; }
+.sx-swatch[data-palette='sand'] { background: #d97757; }
+.sx-swatch[data-palette='forest'] { background: #2f7d54; }
+.sx-swatch[data-palette='indigo'] { background: #4a54c8; }
+.sx-swatch[data-palette='ink'] { background: #17171a; }
+
+.sx-note {
+  margin: 12px 0 0;
+  color: var(--text-tertiary, #6b6f76);
+  font-size: 12px;
+  line-height: 1.5;
 }

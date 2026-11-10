@@ -186,27 +186,16 @@ about five minutes on the reference system.
 - ARM64: the pipeline is x86-64 only, although upstream ships an arm64 macOS build and all four
   native packages exist for `linux-arm64-gnu`.
 
-## 8. Extension panel
+## 8. Appearance settings
 
-Executed on the 4.1.1-3 package, unpacked with `dpkg-deb -x`, against a copy of an existing profile,
-driven through the DevTools protocol. The 4.1.2 archive was compared against 4.1.1 before the bump:
-same Electron, same pinned natives, same resource tree, same host operations and no `usage.centers`
-method; the extension view was verified on the 4.1.2 build.
+Executed on the packaged build with real mouse events dispatched through the DevTools protocol,
+against a copy of an existing profile. The full table lives in
+[`extension-design.md`](extension-design.md#verification); the summary:
 
 | Check | Result |
 | --- | --- |
-| Injection | `dist/scnet-ext/main.js` and `theme.css` present in the archive; the entry script appears once in each of the two HTML files |
-| Sign-in shell | the extension returns early on `/compat/`, so the login window carries no panel |
-| Per-centre usage | one account expanded into 12 centre rows with cluster ids; wallet `0` and special balance reported; `usage.centers` rejected by the host schema and the fallback noted in the panel |
-| Billing | 20 rows of 612, paging wired, no error; the request takes roughly nine seconds against the live service |
-| Transfers | `transfers.list` and `file-tasks.list` both resolve; empty state rendered when nothing is in progress |
-| Connectivity | `api.scnet.cn` 187 ms, `www.scnet.cn` 81 ms, `dlcdn.scnet.cn` 37 ms, all reachable |
-| Sidebar entry | 资源用量 appears as the sixth navigation item, after 高性能计算; the view aligns to the content area (248–1200 px of a 1200 px window), sits above the vendor content and renders the five tabs |
-| Account menu | four items injected before 退出登录 with the vendor's scoped attribute copied at runtime; clicking 用量与账单 opens the panel with the usage tab and 12 rows |
-| Console entries | six routes rendered; one invocation (`fee-summary`) resolved through `auth.open-authenticated-route` |
-| Diagnostics | 12,270-character report with platform, version, theme and the log tail |
-| Themes | `claude` resolves canvas `#faf9f5`, accent `#d97757`, border `#e5e2d9`, radius 12 px; sidebar measured `rgb(240, 238, 230)`; the choice survives a restart and is applied before first paint |
-
-Not verified: notification delivery on a real job transition (no transition occurred), notification
-appearance in the desktop session, dark variants (the vendor theme was left in light mode), and the
-CSV file written to disk.
+| Entry and dialog | `外观` injected before 退出登录; the dialog opens from it and closes on Escape or the backdrop |
+| Palette | `forest` applies accent `#2f7d54`; `ink` switches the surface tokens to dark |
+| Text size | `大` sets `--font-size-base` to `calc(14px * 1.08)`, `小` to `0.92` |
+| Language | `English` renames the entry, title, groups, chips and footnote |
+| Persistence | the choice survives a restart and is applied before first paint |

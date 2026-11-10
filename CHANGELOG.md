@@ -5,6 +5,20 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-3
+
+### Changed
+
+- The extension is reduced to appearance settings. Usage, billing, transfers, connectivity,
+  diagnostics, job notifications, console links and the sidebar entry are removed: the data they
+  showed either duplicated the console or waited on an API that does not exist yet.
+- Palettes: six choices (`system`, `paper`, `sand`, `forest`, `indigo`, `ink`) instead of two, each
+  with a dark variant.
+- Text size: `小`, `标准` and `大`, applied as a multiplier to the renderer's font tokens.
+- Language: `中文` and `English` for the dialog's own strings. The vendor interface has no language
+  switch, so its text stays Chinese and the dialog says so.
+- The entry lives in the account menu; there is no sidebar item and no floating panel.
+
 ## 4.1.2-2
 
 ### Fixed

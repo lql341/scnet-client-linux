@@ -88,14 +88,14 @@ build/linux/                                portable bundle
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.2-2_amd64.deb
+scnet-client_4.1.2-3_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.2-2_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.2-3_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
@@ -127,11 +127,12 @@ leaves them world-readable. What it cannot do is fix the derivation itself — o
 leave "记住密码" off and rely on the API-key path, and revoke keys from the SCNet console when a
 machine is retired.
 
-## Extension panel
+## Appearance settings
 
-The build adds a small panel, injected into the renderer without editing vendor code: per-centre
-usage, bills with CSV export, transfer tasks, a connectivity check, console entry points and theme
-switching. Modules disable themselves when a host operation disappears. See
+One dialog, injected into the renderer without editing vendor code and reachable from the account menu
+under the avatar: six palettes (`system`, `paper`, `sand`, `forest`, `indigo`, `ink`, each with a dark
+variant), three text sizes (`小`, `标准`, `大`) and a language switch for the dialog itself
+(`中文` / `English`; the vendor interface is Chinese only). See
 [`docs/extension-design.md`](docs/extension-design.md).
 
 ## Replaced components

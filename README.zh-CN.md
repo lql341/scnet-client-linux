@@ -83,14 +83,14 @@ build/linux/                                便携目录
     ├── bin/uv                              uv 0.9.9（静态）
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.2-2_amd64.deb
+scnet-client_4.1.2-3_amd64.deb
 ```
 
 ### 运行
 
 ```bash
 build/linux/launcher.sh                          # 便携运行
-sudo apt install ./scnet-client_4.1.2-2_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
+sudo apt install ./scnet-client_4.1.2-3_amd64.deb  # 安装后从菜单启动「SCNet 计算服务」
 ```
 
 启动器在系统能够提供 Chromium 沙箱时保留沙箱——setuid-root 的 `chrome-sandbox`，或非特权
@@ -118,10 +118,11 @@ user namespace（含 Ubuntu 23.10+ 的 `apparmor_restrict_unprivileged_userns` �
 重置为 0600，因此在默认 `umask` 的系统上不再出现其他用户可读的情况。做不到什么：修不了派生方式
 本身——共用机器上请勿勾选「记住密码」，改用 API key 路径，并在机器退役时到 SCNet 控制台吊销密钥。
 
-## 扩展面板
+## 外观设置
 
-构建会在渲染层注入一个小面板，不修改厂商代码：分中心用量、账单与 CSV 导出、传输任务、连通性检测、
-控制台入口与主题切换。宿主操作缺失时相关模块自行停用。详见
+一个对话框，注入渲染层而不修改厂商代码，从头像展开的账户菜单进入：六种配色（`system`、`paper`、
+`sand`、`forest`、`indigo`、`ink`，各带深色变体）、三档字号（小、标准、大），以及对话框自身的语言
+切换（中文 / English；客户端正文仅有中文）。详见
 [`docs/extension-design.zh-CN.md`](docs/extension-design.zh-CN.md)。
 
 ## 替换项
