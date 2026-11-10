@@ -29,6 +29,7 @@ ok() { printf 'ok   %s\n' "$*"; }
 for f in README.md README.zh-CN.md CHANGELOG.md docs/README.md \
          docs/design.md docs/design.zh-CN.md \
          docs/verification.md docs/verification.zh-CN.md \
+         docs/extension-design.md docs/extension-design.zh-CN.md \
          docs/assets/screenshot-linux.png; do
   [ -f "$f" ] || fail "missing $f"
 done
@@ -58,7 +59,8 @@ ok "pinned versions"
 # 4. translation parity
 for pair in "README.md README.zh-CN.md" \
             "docs/design.md docs/design.zh-CN.md" \
-            "docs/verification.md docs/verification.zh-CN.md"; do
+            "docs/verification.md docs/verification.zh-CN.md" \
+            "docs/extension-design.md docs/extension-design.zh-CN.md"; do
   # shellcheck disable=SC2086
   set -- $pair
   en="$(grep -c '^## ' "$1" || true)"

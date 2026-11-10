@@ -82,6 +82,7 @@ jobs:
                    packaging/debian/postinst packaging/debian/postrm \
                    docs/README.md docs/design.md docs/design.zh-CN.md \
                    docs/verification.md docs/verification.zh-CN.md \
+                   docs/extension-design.md docs/extension-design.zh-CN.md \
                    docs/assets/screenshot-linux.png; do
             [ -f "$f" ] || { echo "::error::missing $f"; exit 1; }
           done

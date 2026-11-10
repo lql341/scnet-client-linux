@@ -4,6 +4,7 @@
 | --- | --- |
 | [`design.md`](design.md), [`design.zh-CN.md`](design.zh-CN.md) | Analysis of the vendor distribution: package layout, why the Linux substitution is viable, what is replaced, asar and ABI decisions, launcher policy, packaging |
 | [`verification.md`](verification.md), [`verification.zh-CN.md`](verification.zh-CN.md) | What was executed, on which system, with which result; section 0 records what each packaging revision re-checked |
+| [`extension-design.md`](extension-design.md), [`extension-design.zh-CN.md`](extension-design.zh-CN.md) | Additions beyond the port: account and quota, billing, job monitoring, diagnostics, theming; mechanism, data paths, verification plan, boundaries |
 | [`assets/screenshot-linux.png`](assets/screenshot-linux.png) | The Linux window with the fallback window controls |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Repository changes per packaging revision |
 | [`../README.md`](../README.md), [`../README.zh-CN.md`](../README.zh-CN.md) | Requirements, build, installation, limitations |

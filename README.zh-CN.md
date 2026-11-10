@@ -257,6 +257,7 @@ scnet-client-linux/
 - [`CHANGELOG.md`](CHANGELOG.md) — 按打包修订记录的仓库变更
 - [`docs/design.zh-CN.md`](docs/design.zh-CN.md) — 上游包结构分析、替换依据、asar 与 ABI 决策、打包布局
 - [`docs/verification.zh-CN.md`](docs/verification.zh-CN.md) — 验证流程、实测结果、剩余未知项
+- [`docs/extension-design.zh-CN.md`](docs/extension-design.zh-CN.md) — 计划新增功能、主题、验证方案与边界
 
 ## 状态
 
