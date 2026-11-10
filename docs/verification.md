@@ -199,6 +199,7 @@ driven through the DevTools protocol.
 | Billing | 20 rows of 612, paging wired, no error; the request takes roughly nine seconds against the live service |
 | Transfers | `transfers.list` and `file-tasks.list` both resolve; empty state rendered when nothing is in progress |
 | Connectivity | `api.scnet.cn` 187 ms, `www.scnet.cn` 81 ms, `dlcdn.scnet.cn` 37 ms, all reachable |
+| Account menu | four items injected before 退出登录 with the vendor's scoped attribute copied at runtime; clicking 用量与账单 opens the panel with the usage tab and 12 rows |
 | Console entries | six routes rendered; one invocation (`fee-summary`) resolved through `auth.open-authenticated-route` |
 | Diagnostics | 12,270-character report with platform, version, theme and the log tail |
 | Themes | `claude` resolves canvas `#faf9f5`, accent `#d97757`, border `#e5e2d9`, radius 12 px; sidebar measured `rgb(240, 238, 230)`; the choice survives a restart and is applied before first paint |

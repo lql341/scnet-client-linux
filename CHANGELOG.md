@@ -5,6 +5,15 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.1-5
+
+### Changed
+
+- Extension entry points moved into the account menu that opens from the avatar, beside 我的资源 and
+  费用中心: 用量与账单, 传输任务, 连接诊断 and 主题. The floating corner button is gone.
+- Revision 4 is reverted: the desktop entry keeps `Name[en]=SCNet Client` and icon sizes are
+  generated as before. Both changes had been made without a request.
+
 ## 4.1.1-3
 
 ### Added

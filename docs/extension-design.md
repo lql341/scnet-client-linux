@@ -105,7 +105,15 @@ design.
 Running uploads and downloads with direction, size and progress, read from `transfers.list` and
 `file-tasks.list`. The panel is read-only in the first version.
 
-### 4.5 Console entry points
+### 4.5 Entry points and console links
+
+The panel opens from the account menu that appears under the avatar, next to 我的资源 and 费用中心:
+用量与账单, 传输任务, 连接诊断 and 主题. The menu is rendered by the vendor on every open and its styles
+are scoped with a `data-v` attribute, so the injected items copy that attribute from an existing item
+rather than hard-coding a hash; a `MutationObserver` inserts them once per opening, before 退出登录.
+
+The same menu carries the console destinations that already exist in the renderer: fee summary,
+resource centre, resource application, feedback and profile.
 
 The account card carries the console destinations that already exist in the renderer: fee summary,
 resource centre, resource application, feedback and profile. Each is a route string handed to

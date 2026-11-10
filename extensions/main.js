@@ -552,23 +552,19 @@
 
     mount: function () {
       var self = this;
-      var root = el('div', { id: 'scnet-ext', class: 'sx-root' });
-      root.appendChild(el('button', {
-        class: 'sx-launcher',
-        type: 'button',
-        title: 'SCNet 工具 / Utilities',
-        text: '∑',
-      }));
-      root.firstChild.addEventListener('click', function () { self.toggle(); });
+      var root = el('div', { id: 'scnet-ext', class: 'sx-root', hidden: 'hidden' });
+      var panel = el('div', { class: 'sx-panel' });
 
-      var panel = el('div', { class: 'sx-panel', hidden: 'hidden' });
-      panel.appendChild(el('div', { class: 'sx-tabs' }, [
-        tab('用量', 'usage'),
-        tab('账单', 'billing'),
-        tab('传输', 'transfers'),
-        tab('连接', 'connectivity'),
-        tab('设置', 'settings'),
-      ]));
+      var head = el('div', { class: 'sx-head' });
+      var tabs = el('div', { class: 'sx-tabs' });
+      [['用量', 'usage'], ['账单', 'billing'], ['传输', 'transfers'], ['连接', 'connectivity'], ['设置', 'settings']]
+        .forEach(function (pair) { tabs.appendChild(tab(pair[0], pair[1])); });
+      head.appendChild(tabs);
+      var close = el('button', { class: 'sx-close', type: 'button', title: '关闭', text: '×' });
+      close.addEventListener('click', function () { self.hide(); });
+      head.appendChild(close);
+      panel.appendChild(head);
+
       var body = el('div', { class: 'sx-body' });
       panel.appendChild(body);
       root.appendChild(panel);
@@ -585,20 +581,18 @@
       if (settings.panel) this.show(settings.panel);
     },
 
-    toggle: function () {
-      var hidden = this.panel.hasAttribute('hidden');
-      if (hidden) this.show(settings.panel || 'usage');
-      else this.hide();
+    open: function (name) {
+      this.show(name || settings.panel || 'usage');
     },
 
     hide: function () {
-      this.panel.setAttribute('hidden', 'hidden');
+      this.root.setAttribute('hidden', 'hidden');
     },
 
     show: function (name) {
       settings.panel = name;
       writeSetting(STORE.panel, name);
-      this.panel.removeAttribute('hidden');
+      this.root.removeAttribute('hidden');
       Array.prototype.forEach.call(this.panel.querySelectorAll('[data-tab]'), function (node) {
         node.classList.toggle('sx-active', node.dataset.tab === name);
       });
@@ -829,6 +823,107 @@
     return node;
   }
 
+  // ------------------------------------------------------------- account menu
+
+  /*
+   * Entry points live in the account menu that opens from the avatar, next to
+   * 我的资源 and 费用中心. The menu is rendered by the vendor each time it opens
+   * and its styles are scoped with a data-v attribute, so the injected items copy
+   * that attribute from an existing item instead of hard-coding a hash.
+   */
+  var MENU_ITEMS = [
+    { label: '用量与账单', panel: 'usage', icon: 'chart' },
+    { label: '传输任务', panel: 'transfers', icon: 'transfer' },
+    { label: '连接诊断', panel: 'connectivity', icon: 'pulse' },
+    { label: '主题', panel: 'settings', icon: 'palette' },
+  ];
+
+  var ICONS = {
+    chart: 'M3 3v18h18M7 15v3M12 9v9M17 5v13',
+    transfer: 'M12 3v12m-5-5 5 5 5-5M5 21h14',
+    pulse: 'M3 12h3l3-7 4 14 3-7h3',
+    palette: 'M12 3a9 9 0 1 0 0 18h1.5a2.5 2.5 0 0 0 0-5H12a2 2 0 0 1 0-4h4a5 5 0 0 0 0-10z',
+  };
+
+  function svgIcon(path, scope) {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('class', 'account-menu__item-icon shrink-0 block');
+    svg.setAttribute('aria-hidden', 'true');
+    if (scope) svg.setAttribute(scope.name, scope.value);
+    var node = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    node.setAttribute('d', path);
+    svg.appendChild(node);
+    return svg;
+  }
+
+  var menuModule = {
+    id: 'account-menu',
+    observer: null,
+
+    start: function () {
+      if (this.observer) return;
+      var self = this;
+      this.observer = new MutationObserver(function () { self.inject(); });
+      this.observer.observe(document.body, { childList: true, subtree: true });
+      this.inject();
+    },
+
+    inject: function () {
+      var menu = document.querySelector('.account-menu');
+      if (!menu || menu.querySelector('[data-scnet-ext]')) return;
+
+      var items = menu.querySelectorAll(':scope > button.account-menu__item');
+      if (!items.length) return;
+      var template = items[0];
+      var scope = null;
+      for (var i = 0; i < template.attributes.length; i += 1) {
+        var attr = template.attributes[i];
+        if (attr.name.indexOf('data-v-') === 0) { scope = { name: attr.name, value: attr.value }; break; }
+      }
+      var danger = null;
+      for (var k = 0; k < items.length; k += 1) {
+        if (items[k].className.indexOf('--danger') >= 0) danger = items[k];
+      }
+
+      MENU_ITEMS.forEach(function (item) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'account-menu__item';
+        button.setAttribute('data-scnet-ext', item.panel);
+        button.setAttribute('data-testid', 'scnet-ext-' + item.panel);
+        if (scope) button.setAttribute(scope.name, scope.value);
+        button.appendChild(svgIcon(ICONS[item.icon], scope));
+        var label = document.createElement('span');
+        if (scope) label.setAttribute(scope.name, scope.value);
+        label.className = 'grow basis-0 min-w-0';
+        label.textContent = item.label;
+        button.appendChild(label);
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          board.open(item.panel);
+          closeMenu();
+        });
+        if (danger && danger.parentElement === menu) menu.insertBefore(button, danger);
+        else menu.appendChild(button);
+      });
+    },
+  };
+
+  function closeMenu() {
+    var trigger = document.querySelector('.account-trigger');
+    if (trigger) trigger.click();
+  }
+
   // ------------------------------------------------------------------- startup
 
   function start() {
@@ -838,6 +933,8 @@
         instVersion = typeof value === 'string' ? value : (value && (value.version || value.appVersion)) || '?';
       }
       board.mount();
+      board.hide();
+      menuModule.start();
       themeModule.apply(settings.theme);
       usageModule.refresh();
       jobsModule.start();
@@ -854,6 +951,7 @@
     transfers: transfersModule,
     connectivity: connectivityModule,
     diagnostics: diagnosticsModule,
+    menu: menuModule,
     openRoute: openRoute,
     theme: themeModule,
     settings: settings,

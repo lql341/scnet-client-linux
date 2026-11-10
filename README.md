@@ -88,14 +88,14 @@ build/linux/                                portable bundle
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.1-3_amd64.deb
+scnet-client_4.1.1-5_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.1-3_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.1-5_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
