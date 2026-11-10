@@ -176,3 +176,31 @@ all checks passed
 | 字号 | `大` 时 `--font-size-base` 为 `calc(14px * 1.08)`，`小` 为 `0.92` |
 | 语言 | 切到 `English` 后菜单项、标题、分组、按钮与脚注全部切换 |
 | 持久化 | 重启后保留选择，并在首帧前应用 |
+
+## 9. 完整测试（4.1.2-8 与 4.1.2-9）
+
+在打包产物上执行，通过 DevTools 协议派发真实输入事件；托盘相关项通过会话总线验证。
+
+| 区域 | 结果 |
+| --- | --- |
+| 启动 | 版本 4.1.2，扩展加载，无控制台错误 |
+| 导航 | 新建任务 `#/`、消息频道 `#/channels`、插件 `#/mcp`（连接器目录 7.7k 字符）、自动化 `#/automations`、高性能计算 `#/job-submit`（87 个应用模板） |
+| 对话 | 输入提示词后由 SCNet-Max 应答，并创建新会话 |
+| 本地执行 | 要求 agent 运行 `uname -s`，返回了命令输出，覆盖 shell 与审批链路 |
+| 技能 | `skills.list` 返回 18 项（browser-use、cae-dtchull-case、chinese-official-writing、cua-driver 等） |
+| 连接器 | `connectors.list` 返回 3 个，均已连接（月光音乐盒、合同智能审核、scnet·科学文献洞察智能体） |
+| 文件 | `files.readdir /tmp` 与 `files.stat` 成功，`scnet.read transfers.list` 返回 10 条 |
+| 宿主操作 | `app.get-version`、`runtime.status`、`scnet.read jobs.list`、`mcp.list`、`diagnostics.list-files`、`notifications.get-preferences` 均正常 |
+| 通知 | 权限 granted，通知对象可构造 |
+| 窗口控件 | 三枚按钮，最大化/还原往返正常，提示随界面语言实时切换 |
+| 托盘 | 注册 `org.freedesktop.StatusNotifierItem`；菜单为「显示主窗口 / 返回登录页 / 退出」，通过会话总线激活「显示主窗口」可恢复被隐藏的窗口 |
+| 外观 | 六种配色对应六个强调色，三档字号缩放界面与对话框，五套深色变体均生效，两个渲染层都收到配色与字号 |
+| 语言 | 厂商「设置 → 通用 → 应用显示语言」切换整个界面，并在重启后保留 |
+
+未通过项，已记录为限制：
+
+- **电脑操作（CUA）**：原生驱动可加载，但本构建未向 agent 暴露桌面观察工具，系统中也没有
+  `cua-driver` 可执行文件，因此 agent 报告无法截屏。随包的 `resources/cua/worker.mjs` 依赖厂商仅为
+  macOS 与 Windows 提供的驱动。
+- **模型切换**：账户只开放 SCNet-Max 一个模型，选择器仅提供推理等级与「模型设置」入口，无法验证多模型切换。
+

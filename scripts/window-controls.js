@@ -78,6 +78,8 @@
   }
 
   var maximizeButton = null;
+  var minimizeButton = null;
+  var closeButton = null;
   var maximized = false;
 
   function setMaximized(value) {
@@ -88,6 +90,19 @@
     maximizeButton.title = label(maximized);
     maximizeButton.setAttribute('aria-label', label(maximized));
     maximizeButton.setAttribute('data-maximized', maximized ? 'true' : 'false');
+  }
+
+  /** Re-apply the hint text after the interface language changes. */
+  function relabel() {
+    if (minimizeButton) {
+      minimizeButton.title = text('minimize');
+      minimizeButton.setAttribute('aria-label', text('minimize'));
+    }
+    if (closeButton) {
+      closeButton.title = text('close');
+      closeButton.setAttribute('aria-label', text('close'));
+    }
+    if (maximizeButton) setMaximized(maximized);
   }
 
   function refresh() {
@@ -140,15 +155,17 @@
       '-webkit-app-region:no-drag',
     ].join(';');
 
-    root.appendChild(button('minimize', text('minimize'), function () {
+    minimizeButton = button('minimize', text('minimize'), function () {
       host.invoke('window.minimize').catch(function () {});
-    }));
+    });
+    root.appendChild(minimizeButton);
     maximizeButton = button('maximize', label(false), toggleMaximize);
     maximizeButton.setAttribute('data-maximized', 'false');
     root.appendChild(maximizeButton);
-    root.appendChild(button('close', text('close'), function () {
+    closeButton = button('close', text('close'), function () {
       host.invoke('window.request-main-close').catch(function () {});
-    }));
+    });
+    root.appendChild(closeButton);
 
     var style = document.createElement('style');
     style.textContent = [
@@ -173,6 +190,8 @@
     var existing = document.getElementById(ROOT_ID);
     if (existing) existing.remove();
     maximizeButton = null;
+    minimizeButton = null;
+    closeButton = null;
     mounted = false;
   }
 
@@ -198,8 +217,18 @@
     refresh();
   }
 
+  /*
+   * The vendor language control rewrites documentElement.lang without a reload, so
+   * the hints are refreshed when that attribute changes.
+   */
+  function watchLanguage() {
+    new MutationObserver(function () { relabel(); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  }
+
   function start() {
     sync();
+    watchLanguage();
     var observer = new MutationObserver(function () {
       sync();
     });

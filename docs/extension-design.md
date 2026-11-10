@@ -1,8 +1,8 @@
 # Appearance settings
 
-The build adds one dialog with three settings: palette, text size and the language of the dialog
-itself. Everything is applied through the CSS custom properties the renderer already uses, so no
-vendor code is modified.
+The build adds one dialog with two settings: palette and text size. Everything is applied through the
+CSS custom properties the renderer already uses, so no vendor code is modified. Interface language is
+left to the vendor's own control.
 
 ## Mechanism
 
@@ -42,26 +42,15 @@ height tokens the renderer defines (`--font-size-*`, `--line-height-*`, `--chat-
 zoom would be the alternative, but `display.set-client-zoom-factor` is a vendor operation with its
 own persistence, and a multiplier keeps the layout proportions intact.
 
-## Language
+## Language is the vendor's own setting
 
-The default is Chinese, independently of the vendor language. `中文` and `English` switch the strings
-this build contributes, plus a curated set of labels in the two
-places where the application is most exposed:
+The renderer ships a language control at 设置 → 通用 → 应用显示语言, offering 简体中文 and English. It
+writes through the application's store, so the choice survives a restart in both directions, and it sets
+`documentElement.lang`, which the window-control hints follow.
 
-| Container | Labels |
-| --- | --- |
-| Sidebar | 新建任务 · 消息频道 · 插件 · 自动化 · 高性能计算, section headers 项目 · 最近, badge 实名认证 |
-| Account menu | 我的资源 · 费用中心 · 设置 · 帮助 · 退出登录 |
-| This dialog | entry label, title, group labels, palette and size names, footnote |
-
-The substitution walks the text nodes of `aside.sidebar-shell` and `.account-menu`, replaces exact
-matches only, and remembers the original text per node so that switching back restores it. A
-`MutationObserver` re-applies it after the vendor re-renders the menu.
-
-**Scope.** The vendor renderer has no language switch — `en.lproj` covers macOS menu labels, not
-application text — so anything outside those containers stays Chinese: message content, prompts,
-settings pages, error messages. The dialog states that its scope is limited, and the mapping lives in
-one object in `extensions/main.js` so that a vendor rewording is a one-line change.
+An earlier revision of this build offered its own switch plus a thirteen-label substitution table for
+the sidebar and account menu. That was withdrawn: the vendor control covers the whole interface, and
+two switches produced mixed states such as English navigation inside a Chinese application.
 
 ## Verification
 
@@ -74,7 +63,7 @@ with real mouse events.
 | Dialog | opens from the entry, closes on the backdrop or Escape, three groups rendered |
 | Palette | `forest` applies `#2f7d54` as the accent and repaints the sidebar; `ink` switches the surface tokens to a dark set |
 | Text size | `大` yields `calc(14px * 1.08)` for `--font-size-base`; `小` yields `0.92` |
-| Language | `English` renames the dialog, and the sidebar and account menu labels through the substitution table; switching back restores the originals exactly |
+| Language | vendor switch at 设置 → 通用 → 应用显示语言 changes the whole interface and persists across a restart; window-control hints follow it |
 | Persistence | the choice is restored after a restart and applied before first paint |
 
 Not verified: how the palettes interact with every vendor surface (charts, code blocks, embedded

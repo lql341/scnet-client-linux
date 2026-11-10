@@ -5,6 +5,22 @@ Changes to this repository. Upstream release notes are not reproduced here.
 The Debian version is `<upstream version>-<packaging revision>`; the packaging revision restarts at
 1 for each upstream release and is set in [`scripts/versions.env`](scripts/versions.env).
 
+## 4.1.2-9
+
+### Changed
+
+- The language option and the label substitution table are removed. The vendor renderer does have a
+  language switch after all — 设置 → 通用 → 应用显示语言, offering 简体中文 and English — and it
+  persists across restarts because it is written through the application's own store. A second switch
+  produced mixed interfaces, for example English navigation inside a Chinese application, so this build
+  now leaves language entirely to the vendor.
+
+### Fixed
+
+- The window-control hints follow `documentElement.lang` and are re-applied when that attribute changes,
+  so they read 最小化 / 最大化 / 关闭 in Chinese and Minimize / Maximize / Close in English, matching a
+  vendor switch made without a reload.
+
 ## 4.1.2-8
 
 ### Fixed

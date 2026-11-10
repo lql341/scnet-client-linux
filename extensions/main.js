@@ -1,10 +1,10 @@
 /**
  * Appearance settings for the Linux build.
  *
- * Adds one entry to the account menu that opens a small dialog with three
- * settings: palette, text size and the language of this dialog. Everything is
- * applied through CSS custom properties that the renderer already uses, so no
- * vendor code is touched.
+ * Adds one entry to the account menu that opens a small dialog with two settings:
+ * palette and text size. Everything is applied through CSS custom properties that
+ * the renderer already uses, so no vendor code is touched. Interface language is
+ * left to the vendor's own control (设置 → 通用 → 应用显示语言), which persists.
  *
  * Stored in localStorage under `scnet.ext.*`. Nothing leaves the machine.
  */
@@ -17,7 +17,7 @@
   var compat = /\/compat\//.test(location.pathname);
   window.__scnetExtLoaded = true;
 
-  var KEYS = { palette: 'scnet.ext.palette', size: 'scnet.ext.size', lang: 'scnet.ext.lang' };
+  var KEYS = { palette: 'scnet.ext.palette', size: 'scnet.ext.size' };
   var PALETTES = ['system', 'paper', 'sand', 'forest', 'indigo', 'ink'];
   var SIZES = ['sm', 'md', 'lg'];
 
@@ -27,29 +27,16 @@
       title: '外观',
       palette: '配色',
       size: '字号',
-      language: '语言',
       close: '关闭',
       palettes: { system: '跟随应用', paper: '纸白', sand: '暖砂', forest: '森绿', indigo: '靛蓝', ink: '墨黑' },
       sizes: { sm: '小', md: '标准', lg: '大' },
-      note: '仅本面板与色彩、字号生效；客户端正文由厂商提供，暂只有中文。',
-    },
-    en: {
-      menu: 'Appearance',
-      title: 'Appearance',
-      palette: 'Palette',
-      size: 'Text size',
-      language: 'Language',
-      close: 'Close',
-      palettes: { system: 'Follow app', paper: 'Paper', sand: 'Sand', forest: 'Forest', indigo: 'Indigo', ink: 'Ink' },
-      sizes: { sm: 'Small', md: 'Default', lg: 'Large' },
-      note: 'Applies to the palette, text size and this dialog. Vendor UI text stays Chinese.',
+      note: '配色与字号即时生效。界面语言请到「设置 → 通用 → 应用显示语言」切换。',
     },
   };
 
   var settings = {
     palette: read(KEYS.palette, PALETTES, 'system'),
     size: read(KEYS.size, SIZES, 'md'),
-    lang: read(KEYS.lang, ['zh', 'en'], 'zh'),
   };
 
   function read(key, allowed, fallback) {
@@ -66,7 +53,7 @@
     try { localStorage.setItem(key, value); } catch (error) { /* window-only */ }
   }
 
-  function t() { return TEXT[settings.lang] || TEXT.zh; }
+  function t() { return TEXT.zh; }
 
   // ------------------------------------------------------------------ applying
 
@@ -79,7 +66,7 @@
 
   function setPalette(name) { settings.palette = name; store(KEYS.palette, name); apply(); refresh(); }
   function setSize(name) { settings.size = name; store(KEYS.size, name); apply(); refresh(); }
-  function setLang(name) { settings.lang = name; store(KEYS.lang, name); refresh(); translateDom(); }
+
 
   // -------------------------------------------------------------------- dialog
 
@@ -158,10 +145,6 @@
         return chip(text.sizes[name], null, settings.size === name, function () { setSize(name); }, 'is-size');
       })));
 
-      this.body.appendChild(group(text.language, [['zh', '中文'], ['en', 'English']].map(function (pair) {
-        return chip(pair[1], null, settings.lang === pair[0], function () { setLang(pair[0]); });
-      })));
-
       var note = document.createElement('p');
       note.className = 'sx-note';
       note.textContent = text.note;
@@ -206,79 +189,6 @@
   function refresh() {
     if (dialog.root && !dialog.root.hasAttribute('hidden')) dialog.render();
     syncMenuLabel();
-    translateDom();
-  }
-
-  // ------------------------------------------------------------ dom translation
-
-  /*
-   * The vendor renderer has no language switch, so English is applied to a
-   * curated set of labels in the two places it is most visible: the sidebar and
-   * the account menu. Only exact text matches are replaced, only inside those
-   * two containers, and the original text is remembered per text node so that
-   * switching back restores it. Anything upstream changes or adds stays as
-   * shipped.
-   */
-  var LABELS = {
-    '新建任务': 'New task',
-    '消息频道': 'Channels',
-    '插件': 'Plugins',
-    '自动化': 'Automations',
-    '高性能计算': 'HPC',
-    '项目': 'Projects',
-    '最近': 'Recent',
-    '实名认证': 'Verified',
-    '我的资源': 'My resources',
-    '费用中心': 'Billing',
-    '设置': 'Settings',
-    '帮助': 'Help',
-    '退出登录': 'Sign out',
-  };
-
-  var originals = new WeakMap();
-
-  function containers() {
-    var list = [];
-    var sidebar = document.querySelector('aside.sidebar-shell');
-    if (sidebar) list.push(sidebar);
-    var menu = document.querySelector('.account-menu');
-    if (menu) list.push(menu);
-    return list;
-  }
-
-  /**
-   * The vendor renderer localises itself from the account language and rewrites
-   * its own setting at startup, so translating its labels would fight it when it
-   * already renders English. The table therefore applies only while the vendor
-   * interface is Chinese.
-   */
-  function vendorSpeaksChinese() {
-    var lang = (document.documentElement.lang || '').toLowerCase();
-    if (!lang) return true;
-    return lang.indexOf('zh') === 0;
-  }
-
-  function translateDom() {
-    var english = settings.lang === 'en' && vendorSpeaksChinese();
-    containers().forEach(function (root) {
-      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      var node;
-      while ((node = walker.nextNode())) {
-        var text = node.nodeValue;
-        var key = text.trim();
-        if (!key) continue;
-        if (english) {
-          var translation = LABELS[key];
-          if (!translation) continue;
-          if (!originals.has(node)) originals.set(node, text);
-          if (text !== translation) node.nodeValue = translation;
-        } else if (originals.has(node)) {
-          var original = originals.get(node);
-          if (text !== original) node.nodeValue = original;
-          originals.delete(node);
-        }
-      }
-    });
   }
 
   // ---------------------------------------------------------------- menu entry
@@ -370,12 +280,11 @@
     apply();
     if (compat) return;
     injectMenu();
-    translateDom();
     var queued = false;
     new MutationObserver(function () {
       if (queued) return;
       queued = true;
-      requestAnimationFrame(function () { queued = false; injectMenu(); translateDom(); });
+      requestAnimationFrame(function () { queued = false; injectMenu(); });
     }).observe(document.body, { childList: true, subtree: true });
   }
 
@@ -385,8 +294,6 @@
     apply: apply,
     setPalette: setPalette,
     setSize: setSize,
-    setLang: setLang,
-    translateDom: translateDom,
   };
 
   if (document.readyState === 'loading') {

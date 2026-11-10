@@ -88,14 +88,14 @@ build/linux/                                portable bundle
     ├── bin/uv                              uv 0.9.9 (static)
     ├── agent-browser/agent-browser          agent-browser 0.39.0
     └── agent-skills/ agent-plugins/ cli/ cua/
-scnet-client_4.1.2-8_amd64.deb
+scnet-client_4.1.2-9_amd64.deb
 ```
 
 ### Run
 
 ```bash
 build/linux/launcher.sh                          # portable
-sudo apt install ./scnet-client_4.1.2-8_amd64.deb  # then start "SCNet 计算服务" from the menu
+sudo apt install ./scnet-client_4.1.2-9_amd64.deb  # then start "SCNet 计算服务" from the menu
 ```
 
 The launcher keeps the Chromium sandbox whenever the system can provide one — a setuid-root
@@ -131,8 +131,9 @@ machine is retired.
 
 One dialog, injected into the renderer without editing vendor code and reachable from the account menu
 under the avatar: six palettes (`system`, `paper`, `sand`, `forest`, `indigo`, `ink`, each with a dark
-variant), three text sizes (`小`, `标准`, `大`) and a language switch for the dialog itself
-(`中文` / `English`, covering the dialog, the sidebar navigation and the account menu; the rest of the vendor interface has no language switch and stays Chinese). See
+variant) and three text sizes (`小`, `标准`, `大`). Both apply to the main renderer and to the compat
+renderer that hosts the sign-in shell and the job-submission page. Interface language is the vendor's
+own control (设置 → 通用 → 应用显示语言, 简体中文 / English), which persists. See
 [`docs/extension-design.md`](docs/extension-design.md).
 
 ## Replaced components

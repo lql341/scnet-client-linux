@@ -199,3 +199,34 @@ against a copy of an existing profile. The full table lives in
 | Text size | `大` sets `--font-size-base` to `calc(14px * 1.08)`, `小` to `0.92` |
 | Language | `English` renames the entry, title, groups, chips and footnote |
 | Persistence | the choice survives a restart and is applied before first paint |
+
+## 9. Full test pass (4.1.2-8 and 4.1.2-9)
+
+Executed on the packaged builds, driven through the DevTools protocol with real input events, and in the
+case of the tray through the session bus.
+
+| Area | Result |
+| --- | --- |
+| Startup | version 4.1.2, extension loaded, no console errors |
+| Navigation | New Task `#/`, Channels `#/channels`, Plugins `#/mcp` (7.7k characters of connector catalogue), Automations `#/automations`, HPC `#/job-submit` (87 application templates) |
+| Chat | a prompt was typed and answered by SCNet-Max; a new session was created |
+| Local execution | asking the agent to run `uname -s` returned the command output, which exercises the shell and approval path |
+| Skills | `skills.list` returns 18 entries (browser-use, cae-dtchull-case, chinese-official-writing, cua-driver, …) |
+| Connectors | `connectors.list` returns 3, all connected (月光音乐盒, 合同智能审核, scnet·科学文献洞察智能体) |
+| Files | `files.readdir /tmp` and `files.stat` succeed, `scnet.read transfers.list` returns 10 entries |
+| Host operations | `app.get-version`, `runtime.status`, `scnet.read jobs.list`, `mcp.list`, `diagnostics.list-files`, `notifications.get-preferences` resolve |
+| Notifications | permission granted, notification constructed |
+| Window controls | three buttons, maximize/restore round trip, hints follow the interface language live |
+| Tray | the app registers `org.freedesktop.StatusNotifierItem`; the menu exposes 显示主窗口 / 返回登录页 / 退出, and activating 显示主窗口 over the session bus restores the hidden window |
+| Appearance | six palettes resolve six accents; three sizes scale the interface and the dialog; dark variants resolve for all palettes; both renderers receive palette and size |
+| Language | vendor control at 设置 → 通用 → 应用显示语言 switches the whole interface and persists across restarts |
+
+Not working, recorded as a limitation:
+
+- **Computer use (CUA).** The native driver loads, but the client exposes no desktop observation tool in
+  this build and there is no `cua-driver` executable on the system, so the agent reports that screen
+  capture is unavailable. The bundled `resources/cua/worker.mjs` expects a driver the vendor ships only
+  for macOS and Windows.
+- **Model switching** could not be exercised: the account exposes a single model, SCNet-Max, and the
+  picker offers only reasoning levels and a link to model settings.
+
